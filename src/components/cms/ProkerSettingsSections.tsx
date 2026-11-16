@@ -55,6 +55,17 @@ function isHttpUrl(val?: string | null): boolean {
   return Boolean(val && (val.startsWith("http://") || val.startsWith("https://")));
 }
 
+function resolveSlidePreviewUrl(src?: string | null): string {
+  if (!src) return "";
+  if (src.startsWith("/assets/")) {
+    const base = (
+      process.env.NEXT_PUBLIC_PUBLIC_WEB_URL || "https://hipmipttelkom.vercel.app"
+    ).replace(/\/$/, "");
+    return `${base}${src}`;
+  }
+  return src;
+}
+
 export function ProgramKerjaSection({
   canWrite,
   canDelete,
@@ -504,7 +515,7 @@ export function ProgramKerjaSection({
                                 {slide.imageSrc ? (
                                   // eslint-disable-next-line @next/next/no-img-element
                                   <img
-                                    src={slide.imageSrc}
+                                    src={resolveSlidePreviewUrl(slide.imageSrc)}
                                     alt={slide.imageAlt || slide.title}
                                     className="h-full w-full object-cover"
                                   />
