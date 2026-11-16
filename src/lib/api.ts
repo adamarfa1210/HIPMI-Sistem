@@ -99,8 +99,11 @@ export function normalizePermissions(
   if (Array.isArray(raw)) {
     const normalized: Record<string, PermissionEntry> = {};
     for (const item of raw) {
-      if (item && typeof item.moduleCode === "string" && item.moduleCode.trim()) {
-        normalized[item.moduleCode] = toPermissionEntry(item);
+      if (item && typeof item.moduleCode === "string") {
+        const moduleCode = item.moduleCode.trim();
+        if (moduleCode) {
+          normalized[moduleCode] = toPermissionEntry(item);
+        }
       }
     }
     return normalized;
@@ -108,8 +111,14 @@ export function normalizePermissions(
 
   if (typeof raw === "object") {
     const normalized: Record<string, PermissionEntry> = {};
-    for (const [moduleCode, entry] of Object.entries(raw)) {
-      if (entry && typeof entry === "object") {
+    for (const [rawCode, entry] of Object.entries(raw)) {
+      const moduleCode = rawCode.trim();
+      if (
+        moduleCode &&
+        entry &&
+        typeof entry === "object" &&
+        !Array.isArray(entry)
+      ) {
         normalized[moduleCode] = toPermissionEntry(entry);
       }
     }
@@ -120,22 +129,26 @@ export function normalizePermissions(
 }
 
 export function normalizeAuthUser(payload: RawAuthPayload): AuthUserProfile {
-  if (!payload || typeof payload !== "object") {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     throw new Error("Respons profil pengguna tidak valid");
   }
 
   const rawUser =
-    payload.user && typeof payload.user === "object" ? payload.user : payload;
+    payload.user && typeof payload.user === "object" && !Array.isArray(payload.user)
+      ? payload.user
+      : payload;
 
   if (!rawUser || (!rawUser.id && !rawUser.nim)) {
     throw new Error("Respons profil pengguna tidak valid");
   }
 
-  const roleName = String(rawUser.roleName || payload.role?.name || "");
-  const roleId = String(rawUser.roleId || payload.role?.id || "");
+  const roleName = String(rawUser.roleName || payload.role?.name || "").trim();
+  const roleId = String(rawUser.roleId || payload.role?.id || "").trim();
+  const rawRoleCode = String(
+    rawUser.roleCode || payload.role?.code || ""
+  ).trim();
   const roleCode =
-    rawUser.roleCode ||
-    payload.role?.code ||
+    rawRoleCode ||
     (roleName ? roleName.toLowerCase().replace(/\s+/g, "_") : undefined);
 
   return {
@@ -157,6 +170,21 @@ export function normalizeAuthUser(payload: RawAuthPayload): AuthUserProfile {
       payload.permissions ?? rawUser.permissions
     ),
   };
+}
+
+export function hasPermission(
+  user: AuthUserProfile | null,
+  moduleCode: string,
+  action: keyof PermissionEntry
+): boolean {
+  if (!user) return false;
+  if (
+    user.roleName.trim().toLowerCase() === "admin" ||
+    user.roleCode?.trim().toLowerCase() === "admin"
+  ) {
+    return true;
+  }
+  return Boolean(user.permissions?.[moduleCode]?.[action]);
 }
 
 export interface ApiResponse<T> {

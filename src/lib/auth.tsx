@@ -5,11 +5,13 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import {
   apiRequest,
   getStoredToken,
+  hasPermission,
   normalizeAuthUser,
   setStoredToken,
   type AuthUserProfile,
@@ -31,8 +33,10 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const authEpochRef = useRef(0);
 
   const refreshMe = useCallback(async () => {
+    const epoch = ++authEpochRef.current;
     const token = getStoredToken();
     if (!token) {
       setUser(null);
@@ -41,12 +45,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     try {
       const data = await apiRequest<RawAuthPayload>("/api/auth/me");
+      if (authEpochRef.current !== epoch) return;
       setUser(normalizeAuthUser(data));
     } catch {
+      if (authEpochRef.current !== epoch) return;
       setStoredToken(null);
       setUser(null);
     } finally {
-      setLoading(false);
+      if (authEpochRef.current === epoch) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -55,29 +63,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshMe]);
 
   const login = useCallback(async (nim: string, password: string) => {
-    const data = await apiRequest<RawAuthPayload>("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ nim, password }),
-    });
-    if (!data.accessToken) {
-      throw new Error("Token autentikasi tidak ditemukan pada respons login");
+    const epoch = ++authEpochRef.current;
+    try {
+      const data = await apiRequest<RawAuthPayload>("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ nim, password }),
+      });
+      if (authEpochRef.current !== epoch) return;
+      if (!data.accessToken) {
+        throw new Error("Token autentikasi tidak ditemukan pada respons login");
+      }
+      const normalizedUser = normalizeAuthUser(data);
+      setStoredToken(data.accessToken);
+      setUser(normalizedUser);
+    } finally {
+      if (authEpochRef.current === epoch) {
+        setLoading(false);
+      }
     }
-    const normalizedUser = normalizeAuthUser(data);
-    setStoredToken(data.accessToken);
-    setUser(normalizedUser);
   }, []);
 
   const logout = useCallback(() => {
+    authEpochRef.current += 1;
     setStoredToken(null);
     setUser(null);
+    setLoading(false);
   }, []);
 
   const can = useCallback(
-    (moduleCode: string, action: keyof PermissionEntry) => {
-      if (!user) return false;
-      if (user.roleName === "Admin" || user.roleCode === "admin") return true;
-      return Boolean(user.permissions?.[moduleCode]?.[action]);
-    },
+    (moduleCode: string, action: keyof PermissionEntry) =>
+      hasPermission(user, moduleCode, action),
     [user]
   );
 

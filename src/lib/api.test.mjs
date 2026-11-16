@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeAuthUser, normalizePermissions } from "./api.ts";
+import { hasPermission, normalizeAuthUser, normalizePermissions } from "./api.ts";
 
 test("normalizeAuthUser unwraps /api/auth/login payload with array permissions", () => {
   const loginData = {
@@ -152,7 +152,7 @@ test("normalizeAuthUser uses role.name fallback when user.roleName is missing", 
   });
 });
 
-test("normalizePermissions handles empty, null, undefined, and malformed inputs safely", () => {
+test("normalizePermissions handles empty, null, undefined, trimmed keys, and malformed inputs safely", () => {
   assert.deepEqual(normalizePermissions(null), {});
   assert.deepEqual(normalizePermissions(undefined), {});
   assert.deepEqual(normalizePermissions([]), {});
@@ -160,7 +160,7 @@ test("normalizePermissions handles empty, null, undefined, and malformed inputs 
     normalizePermissions([
       { moduleCode: "", canRead: true },
       { canRead: true },
-      { moduleCode: "cms", canRead: true },
+      { moduleCode: " cms ", canRead: true },
     ]),
     {
       cms: {
@@ -172,10 +172,101 @@ test("normalizePermissions handles empty, null, undefined, and malformed inputs 
       },
     }
   );
+  assert.deepEqual(
+    normalizePermissions({
+      " ": { read: true },
+      invalidArray: [],
+      " cms ": { read: true, approve: true },
+    }),
+    {
+      cms: {
+        read: true,
+        create: false,
+        update: false,
+        delete: false,
+        approve: true,
+      },
+    }
+  );
 });
 
-test("normalizeAuthUser rejects invalid or empty payloads", () => {
+test("normalizeAuthUser rejects invalid, array, or empty payloads", () => {
   assert.throws(() => normalizeAuthUser(null), /tidak valid/);
+  assert.throws(() => normalizeAuthUser([]), /tidak valid/);
   assert.throws(() => normalizeAuthUser({}), /tidak valid/);
   assert.throws(() => normalizeAuthUser({ user: {} }), /tidak valid/);
+  assert.throws(() => normalizeAuthUser({ user: [] }), /tidak valid/);
+});
+
+test("hasPermission preserves identical RBAC decisions between login and /api/auth/me", () => {
+  const loginUser = normalizeAuthUser({
+    accessToken: "jwt-token",
+    user: {
+      id: "user-10",
+      nim: "1201220010",
+      fullName: "Nadia Putri",
+      roleId: "role-2",
+      roleName: "Media Kreatif",
+      roleCode: "media_kreatif",
+      status: "Aktif",
+    },
+    permissions: [
+      {
+        moduleCode: "cms",
+        canRead: true,
+        canCreate: true,
+        canUpdate: false,
+        canDelete: false,
+        canApprove: false,
+      },
+    ],
+  });
+
+  const meUser = normalizeAuthUser({
+    user: {
+      id: "user-10",
+      nim: "1201220010",
+      fullName: "Nadia Putri",
+      roleId: "role-2",
+      roleName: "Media Kreatif",
+      status: "Aktif",
+    },
+    role: { id: "role-2", name: "Media Kreatif" },
+    permissions: [
+      {
+        moduleCode: "cms",
+        canRead: true,
+        canCreate: true,
+        canUpdate: false,
+        canDelete: false,
+        canApprove: false,
+      },
+    ],
+  });
+
+  for (const profile of [loginUser, meUser]) {
+    assert.equal(hasPermission(profile, "cms", "read"), true);
+    assert.equal(hasPermission(profile, "cms", "create"), true);
+    assert.equal(hasPermission(profile, "cms", "update"), false);
+    assert.equal(hasPermission(profile, "cms", "delete"), false);
+    assert.equal(hasPermission(profile, "cms", "approve"), false);
+    assert.equal(hasPermission(profile, "finance", "read"), false);
+  }
+
+  assert.equal(hasPermission(null, "cms", "read"), false);
+
+  const adminByRoleCode = normalizeAuthUser({
+    user: {
+      id: "admin-1",
+      nim: "1201220000",
+      fullName: "Super Admin",
+      roleId: "role-admin",
+      roleName: " Admin ",
+      roleCode: "ADMIN",
+    },
+    permissions: [],
+  });
+  assert.equal(adminByRoleCode.roleName, "Admin");
+  assert.equal(hasPermission(adminByRoleCode, "cms", "delete"), true);
+  assert.equal(hasPermission(adminByRoleCode, "cms", "approve"), true);
 });
