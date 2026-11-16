@@ -245,17 +245,11 @@ export function ProgramKerjaSection({
         title: editingSlide.title,
         description: editingSlide.description,
         mediaSourceLabel: editingSlide.mediaSourceLabel,
-        slotStatus: editingSlide.slotStatus,
+        slotStatus: editingSlide.imageSrc.trim() ? editingSlide.slotStatus : "pending-asset",
         sortOrder: editingSlide.sortOrder,
+        imageSrc: editingSlide.imageSrc.trim() || null,
+        imageAlt: editingSlide.imageAlt.trim() || null,
       };
-      if (editingSlide.imageAlt.trim().length >= 10) {
-        payload.imageAlt = editingSlide.imageAlt.trim();
-      }
-      if (editingSlide.hasNewImage && isHttpUrl(editingSlide.imageSrc)) {
-        payload.imageSrc = editingSlide.imageSrc;
-      } else if (!editingSlide.slideId && isHttpUrl(editingSlide.imageSrc)) {
-        payload.imageSrc = editingSlide.imageSrc;
-      }
 
       if (editingSlide.slideId) {
         await apiRequest(`/api/cms/program-kerja/slide/${editingSlide.slideId}`, {
@@ -359,16 +353,43 @@ export function ProgramKerjaSection({
                   Slug publik: <code>/program-kerja/{currentBidang.slug}</code>
                 </p>
               </div>
-              {canWrite && (
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#E3EF26] px-4 py-2.5 text-xs font-bold text-[#06231D] hover:brightness-95 disabled:opacity-50"
-                >
-                  <Save className="h-4 w-4" />
-                  Simpan Bidang
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {canDelete && (
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={async () => {
+                      if (!window.confirm(`Kosongkan teks & seluruh kompartemen bidang ${currentBidang.shortName}?`)) return;
+                      setSaving(true);
+                      try {
+                        await apiRequest(`/api/cms/program-kerja/bidang/${currentBidang.id}`, {
+                          method: "DELETE",
+                        });
+                        onNotify(`Konten bidang ${currentBidang.shortName} berhasil dikosongkan.`);
+                        await loadBidangs();
+                      } catch (err) {
+                        onNotify(err instanceof Error ? err.message : "Gagal mengosongkan bidang", true);
+                      } finally {
+                        setSaving(false);
+                      }
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs font-bold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Kosongkan Bidang
+                  </button>
+                )}
+                {canWrite && (
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#E3EF26] px-4 py-2.5 text-xs font-bold text-[#06231D] hover:brightness-95 disabled:opacity-50"
+                  >
+                    <Save className="h-4 w-4" />
+                    Simpan Bidang
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -763,31 +784,55 @@ export function ProgramKerjaSection({
                       {editingSlide.imageSrc || "Belum ada foto terunggah"}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onOpenCropper(
-                        "program-kerja",
-                        editingSlide.imageAlt || editingSlide.title,
-                        (res) =>
+                  <div className="flex items-center gap-2">
+                    {editingSlide.imageSrc ? (
+                      <button
+                        type="button"
+                        onClick={() =>
                           setEditingSlide((p) =>
                             p
                               ? {
                                   ...p,
-                                  imageSrc: res.url,
-                                  imageAlt: res.imageAlt || p.imageAlt,
-                                  slotStatus: "ready",
+                                  imageSrc: "",
+                                  imageAlt: "",
+                                  slotStatus: "pending-asset",
                                   hasNewImage: true,
                                 }
                               : p
                           )
-                      )
-                    }
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#076653] px-3 py-2 text-xs font-bold text-white hover:bg-[#06231D]"
-                  >
-                    <ImagePlus className="h-4 w-4" />
-                    Crop &amp; Upload 4:5
-                  </button>
+                        }
+                        className="inline-flex items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Hapus Foto
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onOpenCropper(
+                          "program-kerja",
+                          editingSlide.imageAlt || editingSlide.title,
+                          (res) =>
+                            setEditingSlide((p) =>
+                              p
+                                ? {
+                                    ...p,
+                                    imageSrc: res.url,
+                                    imageAlt: res.imageAlt || p.imageAlt,
+                                    slotStatus: "ready",
+                                    hasNewImage: true,
+                                  }
+                                : p
+                            )
+                        )
+                      }
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-[#076653] px-3 py-2 text-xs font-bold text-white hover:bg-[#06231D]"
+                    >
+                      <ImagePlus className="h-4 w-4" />
+                      Crop &amp; Upload 4:5
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -1039,16 +1084,41 @@ export function SiteSettingsAnnouncementsSection({
             </div>
           </div>
 
-          {canWrite && (
-            <button
-              type="submit"
-              disabled={saving}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#E3EF26] px-4 py-2.5 text-xs font-bold text-[#06231D] hover:brightness-95 disabled:opacity-50"
-            >
-              <Save className="h-4 w-4" />
-              {saving ? "Menyimpan..." : "Simpan Site Settings"}
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {canDelete && (
+              <button
+                type="button"
+                disabled={saving}
+                onClick={async () => {
+                  if (!window.confirm("Kosongkan seluruh teks Site Settings publik?")) return;
+                  setSaving(true);
+                  try {
+                    await apiRequest("/api/cms/settings", { method: "DELETE" });
+                    onNotify("Site Settings dikosongkan & memicu revalidasi Web UKM Profile.");
+                    await loadAll();
+                  } catch (err) {
+                    onNotify(err instanceof Error ? err.message : "Gagal mengosongkan Site Settings", true);
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs font-bold text-red-700 hover:bg-red-100 disabled:opacity-50"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Kosongkan Settings
+              </button>
+            )}
+            {canWrite && (
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#E3EF26] px-4 py-2.5 text-xs font-bold text-[#06231D] hover:brightness-95 disabled:opacity-50"
+              >
+                <Save className="h-4 w-4" />
+                {saving ? "Menyimpan..." : "Simpan Site Settings"}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">

@@ -102,10 +102,10 @@ export function PartnersSection({
         scope,
         period,
         status,
-        imageAlt,
+        imageSrc: imageSrc.trim() || null,
+        imageAlt: imageAlt.trim() || null,
         isPublished,
       };
-      if (imageSrc.startsWith("http")) payload.imageSrc = imageSrc;
       if (selectedId) {
         await apiRequest(`/api/cms/partners/${selectedId}`, {
           method: "PATCH",
@@ -263,27 +263,42 @@ export function PartnersSection({
             </p>
           </div>
           {canWrite ? (
-            <button
-              type="button"
-              onClick={() =>
-                onOpenCropper("partnership", imageAlt, (res) => {
-                  setImageSrc(res.url);
-                  setImageAlt(res.imageAlt);
-                })
-              }
-              className="inline-flex min-h-[38px] cursor-pointer items-center gap-1.5 rounded-[6px] bg-[#076653] px-4 font-display text-xs font-bold text-[#FFFDEE]"
-            >
-              <Scissors className="h-3.5 w-3.5" />
-              <span>Crop &amp; Upload 1:1</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {imageSrc ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImageSrc("");
+                    setImageAlt("");
+                  }}
+                  className="inline-flex min-h-[38px] cursor-pointer items-center gap-1.5 rounded-[6px] border border-red-200 bg-red-50 px-3 font-display text-xs font-bold text-red-700 hover:bg-red-100"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Hapus Logo</span>
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() =>
+                  onOpenCropper("partnership", imageAlt, (res) => {
+                    setImageSrc(res.url);
+                    setImageAlt(res.imageAlt);
+                  })
+                }
+                className="inline-flex min-h-[38px] cursor-pointer items-center gap-1.5 rounded-[6px] bg-[#076653] px-4 font-display text-xs font-bold text-[#FFFDEE]"
+              >
+                <Scissors className="h-3.5 w-3.5" />
+                <span>Crop &amp; Upload 1:1</span>
+              </button>
+            </div>
           ) : null}
         </div>
         <CharCounterInput
-          label="Alt Text Logo Mitra"
+          label="Alt Text Logo Mitra (opsional jika tanpa logo)"
           value={imageAlt}
           onChange={setImageAlt}
           maxLength={140}
-          required
+          required={Boolean(imageSrc.trim())}
         />
         <label className="flex min-h-[40px] cursor-pointer items-center gap-2">
           <input
@@ -387,14 +402,12 @@ export function BisnisKaderSection({
         description,
         ownerLabel,
         verifiedLabel,
-        slotStatus,
+        imageSrc: imageSrc.trim() || null,
+        imageUrl: imageSrc.trim() || null,
+        imageAlt: imageAlt.trim() || null,
+        slotStatus: imageSrc.trim() ? slotStatus : "pending-asset",
         isPublished: true,
       };
-      if (imageAlt.trim()) payload.imageAlt = imageAlt.trim();
-      if (imageSrc.startsWith("http")) {
-        payload.imageSrc = imageSrc;
-        payload.imageUrl = imageSrc;
-      }
       if (selectedId) {
         await apiRequest(`/api/cms/kader-businesses/${selectedId}`, {
           method: "PATCH",
@@ -554,20 +567,36 @@ export function BisnisKaderSection({
             </p>
           </div>
           {canWrite ? (
-            <button
-              type="button"
-              onClick={() =>
-                onOpenCropper("bisnis-kader", imageAlt, (res) => {
-                  setImageSrc(res.url);
-                  setImageAlt(res.imageAlt);
-                  setSlotStatus("ready");
-                })
-              }
-              className="inline-flex min-h-[38px] cursor-pointer items-center gap-1.5 rounded-[6px] bg-[#076653] px-4 font-display text-xs font-bold text-[#FFFDEE]"
-            >
-              <Scissors className="h-3.5 w-3.5" />
-              <span>Crop &amp; Upload 4:3</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {imageSrc ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImageSrc("");
+                    setImageAlt("");
+                    setSlotStatus("pending-asset");
+                  }}
+                  className="inline-flex min-h-[38px] cursor-pointer items-center gap-1.5 rounded-[6px] border border-red-200 bg-red-50 px-3 font-display text-xs font-bold text-red-700 hover:bg-red-100"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Hapus Foto</span>
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() =>
+                  onOpenCropper("bisnis-kader", imageAlt, (res) => {
+                    setImageSrc(res.url);
+                    setImageAlt(res.imageAlt);
+                    setSlotStatus("ready");
+                  })
+                }
+                className="inline-flex min-h-[38px] cursor-pointer items-center gap-1.5 rounded-[6px] bg-[#076653] px-4 font-display text-xs font-bold text-[#FFFDEE]"
+              >
+                <Scissors className="h-3.5 w-3.5" />
+                <span>Crop &amp; Upload 4:3</span>
+              </button>
+            </div>
           ) : null}
         </div>
         <CharCounterInput
@@ -665,14 +694,12 @@ export function AchievementsSection({
         description,
         recipientLabel,
         organizerLabel,
-        slotStatus,
+        imageSrc: imageSrc.trim() || null,
+        imageUrl: imageSrc.trim() || null,
+        imageAlt: imageAlt.trim() || null,
+        slotStatus: imageSrc.trim() ? slotStatus : "pending-asset",
         isPublished: true,
       };
-      if (imageAlt.trim()) payload.imageAlt = imageAlt.trim();
-      if (imageSrc.startsWith("http")) {
-        payload.imageSrc = imageSrc;
-        payload.imageUrl = imageSrc;
-      }
       if (selectedId) {
         await apiRequest(`/api/cms/achievements/${selectedId}`, {
           method: "PATCH",
@@ -830,20 +857,36 @@ export function AchievementsSection({
             </p>
           </div>
           {canWrite ? (
-            <button
-              type="button"
-              onClick={() =>
-                onOpenCropper("prestasi", imageAlt, (res) => {
-                  setImageSrc(res.url);
-                  setImageAlt(res.imageAlt);
-                  setSlotStatus("ready");
-                })
-              }
-              className="inline-flex min-h-[38px] cursor-pointer items-center gap-1.5 rounded-[6px] bg-[#076653] px-4 font-display text-xs font-bold text-[#FFFDEE]"
-            >
-              <Scissors className="h-3.5 w-3.5" />
-              <span>Crop &amp; Upload 4:3</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {imageSrc ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImageSrc("");
+                    setImageAlt("");
+                    setSlotStatus("pending-asset");
+                  }}
+                  className="inline-flex min-h-[38px] cursor-pointer items-center gap-1.5 rounded-[6px] border border-red-200 bg-red-50 px-3 font-display text-xs font-bold text-red-700 hover:bg-red-100"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Hapus Foto</span>
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() =>
+                  onOpenCropper("prestasi", imageAlt, (res) => {
+                    setImageSrc(res.url);
+                    setImageAlt(res.imageAlt);
+                    setSlotStatus("ready");
+                  })
+                }
+                className="inline-flex min-h-[38px] cursor-pointer items-center gap-1.5 rounded-[6px] bg-[#076653] px-4 font-display text-xs font-bold text-[#FFFDEE]"
+              >
+                <Scissors className="h-3.5 w-3.5" />
+                <span>Crop &amp; Upload 4:3</span>
+              </button>
+            </div>
           ) : null}
         </div>
         <CharCounterInput

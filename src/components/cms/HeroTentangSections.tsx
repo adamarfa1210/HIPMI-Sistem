@@ -85,17 +85,11 @@ export function HeroSlidesSection({
       const payload: any = {
         title,
         subtitle,
-        imageAlt,
+        imageSrc: imageSrc.trim() || null,
+        imageAlt: imageAlt.trim() || null,
         sortOrder: Number(sortOrder),
         isPublished,
       };
-      if (imageSrc.startsWith("http")) {
-        payload.imageSrc = imageSrc;
-      } else if (!selectedId) {
-        throw new Error(
-          "Silakan unggah gambar Hero (16:9) melalui tombol Crop & Upload terlebih dahulu."
-        );
-      }
 
       if (selectedId) {
         await apiRequest(`/api/cms/hero-slides/${selectedId}`, {
@@ -246,29 +240,44 @@ export function HeroSlidesSection({
               </p>
             </div>
             {canWrite ? (
-              <button
-                type="button"
-                onClick={() =>
-                  onOpenCropper("hero-home", imageAlt, (res) => {
-                    setImageSrc(res.url);
-                    setImageAlt(res.imageAlt);
-                  })
-                }
-                className="inline-flex min-h-[40px] cursor-pointer items-center gap-1.5 rounded-[6px] bg-[#076653] px-4 font-display text-xs font-bold text-[#FFFDEE]"
-              >
-                <Scissors className="h-3.5 w-3.5" />
-                <span>Crop &amp; Upload 16:9</span>
-              </button>
+              <div className="flex items-center gap-2">
+                {imageSrc ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImageSrc("");
+                      setImageAlt("");
+                    }}
+                    className="inline-flex min-h-[40px] cursor-pointer items-center gap-1.5 rounded-[6px] border border-red-200 bg-red-50 px-3 font-display text-xs font-bold text-red-700 hover:bg-red-100"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Hapus Foto</span>
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() =>
+                    onOpenCropper("hero-home", imageAlt, (res) => {
+                      setImageSrc(res.url);
+                      setImageAlt(res.imageAlt);
+                    })
+                  }
+                  className="inline-flex min-h-[40px] cursor-pointer items-center gap-1.5 rounded-[6px] bg-[#076653] px-4 font-display text-xs font-bold text-[#FFFDEE]"
+                >
+                  <Scissors className="h-3.5 w-3.5" />
+                  <span>Crop &amp; Upload 16:9</span>
+                </button>
+              </div>
             ) : null}
           </div>
         </div>
 
         <CharCounterInput
-          label="Alt Text Gambar (imageAlt)"
+          label="Alt Text Gambar (imageAlt, opsional jika tanpa foto)"
           value={imageAlt}
           onChange={setImageAlt}
           maxLength={140}
-          required
+          required={Boolean(imageSrc.trim())}
         />
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -314,6 +323,7 @@ export function HeroSlidesSection({
 
 export function TentangSection({
   canWrite,
+  canDelete,
   onNotify,
   onOpenCropper,
 }: CmsSectionCommonProps) {
@@ -365,6 +375,7 @@ export function TentangSection({
         title,
         description,
         secondaryDescription: secondaryDescription.trim() || null,
+        videoPosterSrc: videoPosterSrc.trim() || null,
         videoUrl: videoUrl.trim() || null,
         pillars: pillars.map((p, idx) => ({
           title: p.title,
@@ -372,9 +383,6 @@ export function TentangSection({
           sortOrder: idx + 1,
         })),
       };
-      if (videoPosterSrc.startsWith("http")) {
-        payload.videoPosterSrc = videoPosterSrc;
-      }
 
       await apiRequest("/api/cms/tentang", {
         method: "PATCH",
@@ -444,20 +452,32 @@ export function TentangSection({
                 </p>
               </div>
               {canWrite ? (
-                <button
-                  type="button"
-                  onClick={() =>
-                    onOpenCropper(
-                      "tentang-video",
-                      "Poster Video Profil HIPMI PT Telkom",
-                      (res) => setVideoPosterSrc(res.url)
-                    )
-                  }
-                  className="inline-flex min-h-[38px] cursor-pointer items-center gap-1.5 rounded-[6px] bg-[#076653] px-3.5 font-display text-xs font-bold text-[#FFFDEE]"
-                >
-                  <Scissors className="h-3.5 w-3.5" />
-                  <span>Ganti Poster</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  {videoPosterSrc ? (
+                    <button
+                      type="button"
+                      onClick={() => setVideoPosterSrc("")}
+                      className="inline-flex min-h-[38px] cursor-pointer items-center gap-1.5 rounded-[6px] border border-red-200 bg-red-50 px-3 font-display text-xs font-bold text-red-700 hover:bg-red-100"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>Hapus Poster</span>
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onOpenCropper(
+                        "tentang-video",
+                        "Poster Video Profil HIPMI PT Telkom",
+                        (res) => setVideoPosterSrc(res.url)
+                      )
+                    }
+                    className="inline-flex min-h-[38px] cursor-pointer items-center gap-1.5 rounded-[6px] bg-[#076653] px-3.5 font-display text-xs font-bold text-[#FFFDEE]"
+                  >
+                    <Scissors className="h-3.5 w-3.5" />
+                    <span>Ganti Poster</span>
+                  </button>
+                </div>
               ) : null}
             </div>
           </div>
@@ -515,15 +535,50 @@ export function TentangSection({
         </div>
       </div>
 
-      {canWrite ? (
-        <div className="flex justify-end border-t border-[#D4E4DC] pt-4">
-          <button
-            type="submit"
-            disabled={saving}
-            className="inline-flex min-h-[44px] cursor-pointer items-center rounded-[6px] bg-[#E3EF26] px-6 font-display text-xs font-bold text-[#06231D] hover:bg-[#d5e11e] disabled:opacity-60"
-          >
-            {saving ? "Menyimpan..." : "Simpan Tentang & 3 Pilar →"}
-          </button>
+      {canWrite || canDelete ? (
+        <div className="flex flex-wrap items-center justify-end gap-3 border-t border-[#D4E4DC] pt-4">
+          {canDelete ? (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={async () => {
+                if (!confirm("Kosongkan seluruh teks Tentang, Poster & 3 Pilar?")) return;
+                setSaving(true);
+                try {
+                  await apiRequest("/api/cms/tentang", { method: "DELETE" });
+                  setEyebrow("");
+                  setTitle("");
+                  setDescription("");
+                  setSecondaryDescription("");
+                  setVideoPosterSrc("");
+                  setVideoUrl("");
+                  setPillars([
+                    { title: "", description: "" },
+                    { title: "", description: "" },
+                    { title: "", description: "" },
+                  ]);
+                  onNotify("Profil Tentang & 3 Pilar dikosongkan & Web UKM direvalidasi.");
+                } catch (err: any) {
+                  onNotify(err.message, true);
+                } finally {
+                  setSaving(false);
+                }
+              }}
+              className="inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 rounded-[6px] border border-red-200 bg-red-50 px-5 font-display text-xs font-bold text-red-700 hover:bg-red-100 disabled:opacity-60"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              <span>Kosongkan Tentang &amp; Pilar</span>
+            </button>
+          ) : null}
+          {canWrite ? (
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex min-h-[44px] cursor-pointer items-center rounded-[6px] bg-[#E3EF26] px-6 font-display text-xs font-bold text-[#06231D] hover:bg-[#d5e11e] disabled:opacity-60"
+            >
+              {saving ? "Menyimpan..." : "Simpan Tentang & 3 Pilar →"}
+            </button>
+          ) : null}
         </div>
       ) : null}
     </form>
