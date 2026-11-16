@@ -1,0 +1,43 @@
+:root {
+  /* Brand & Surface */
+  --bg-deep: #06231d;
+  --surface-dark: #0c342c;
+  --surface-elevated: #09352c;
+  --surface-emerald: #076653;
+  --bg-cream: #fffdee;
+  --tint-mint: #e2fbce;
+  --surface-card: #ffffff;
+  --accent-lime: #e3ef26;
+
+  /* Text */
+  --text-cream: #fffdee;
+  --text-cream-muted: #c7dcd2;
+  --text-ink: #06231d;
+  --text-ink-muted: #2f4f46;
+
+  /* Borders */
+  --border-dark: #124236;
+  --border-light: #d4e4dc;
+
+  /* Semantic Status */
+  --status-success-text: #076653;
+  --status-success-bg: #e2fbce;
+  --status-success-border: #a7f3d0;
+
+  --status-warning-text: #854d0e;
+  --status-warning-bg: #fef9c3;
+  --status-warning-border: #fde047;
+
+  --status-danger-text: #991b1b;
+  --status-danger-bg: #fee2e2;
+  --status-danger-border: #fecaca;
+
+  --status-neutral-text: #2f4f46;
+  --status-neutral-bg: #f1f5f9;
+  --status-neutral-border: #cbd5e1;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-pill: 9999px;
+}
