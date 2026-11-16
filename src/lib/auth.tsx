@@ -10,9 +10,11 @@ import React, {
 import {
   apiRequest,
   getStoredToken,
+  normalizeAuthUser,
   setStoredToken,
   type AuthUserProfile,
   type PermissionEntry,
+  type RawAuthPayload,
 } from "./api";
 
 interface AuthContextValue {
@@ -38,8 +40,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     try {
-      const me = await apiRequest<AuthUserProfile>("/api/auth/me");
-      setUser(me);
+      const data = await apiRequest<RawAuthPayload>("/api/auth/me");
+      setUser(normalizeAuthUser(data));
     } catch {
       setStoredToken(null);
       setUser(null);
@@ -53,15 +55,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshMe]);
 
   const login = useCallback(async (nim: string, password: string) => {
-    const data = await apiRequest<{
-      accessToken: string;
-      user: AuthUserProfile;
-    }>("/api/auth/login", {
+    const data = await apiRequest<RawAuthPayload>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ nim, password }),
     });
+    if (!data.accessToken) {
+      throw new Error("Token autentikasi tidak ditemukan pada respons login");
+    }
+    const normalizedUser = normalizeAuthUser(data);
     setStoredToken(data.accessToken);
-    setUser(data.user);
+    setUser(normalizedUser);
   }, []);
 
   const logout = useCallback(() => {
@@ -72,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const can = useCallback(
     (moduleCode: string, action: keyof PermissionEntry) => {
       if (!user) return false;
-      if (user.roleName === "Admin") return true;
+      if (user.roleName === "Admin" || user.roleCode === "admin") return true;
       return Boolean(user.permissions?.[moduleCode]?.[action]);
     },
     [user]

@@ -12,15 +12,151 @@ export interface PermissionEntry {
   approve: boolean;
 }
 
+export interface RawPermissionEntry {
+  moduleId?: string;
+  moduleCode?: string;
+  moduleLabel?: string;
+  canRead?: boolean;
+  canCreate?: boolean;
+  canUpdate?: boolean;
+  canDelete?: boolean;
+  canApprove?: boolean;
+  read?: boolean;
+  create?: boolean;
+  update?: boolean;
+  delete?: boolean;
+  approve?: boolean;
+}
+
+export type RawPermissionsInput =
+  | RawPermissionEntry[]
+  | Record<string, Partial<PermissionEntry> & Partial<RawPermissionEntry>>
+  | null
+  | undefined;
+
 export interface AuthUserProfile {
   id: string;
   nim: string;
   fullName: string;
   roleId: string;
   roleName: string;
+  roleCode?: string;
   status: string;
   totalScore?: number;
+  whatsappNumber?: string | null;
+  prodi?: string | null;
+  fakultas?: string | null;
+  instagram?: string | null;
+  businessName?: string | null;
+  interestCategory?: string | null;
   permissions: Record<string, PermissionEntry>;
+}
+
+export interface RawAuthPayload {
+  accessToken?: string;
+  user?: Partial<AuthUserProfile> & {
+    permissions?: RawPermissionsInput;
+  };
+  role?: {
+    id?: string;
+    name?: string;
+    code?: string;
+  };
+  permissions?: RawPermissionsInput;
+  totalScore?: number;
+  id?: string;
+  nim?: string;
+  fullName?: string;
+  roleId?: string;
+  roleName?: string;
+  roleCode?: string;
+  status?: string;
+  whatsappNumber?: string | null;
+  prodi?: string | null;
+  fakultas?: string | null;
+  instagram?: string | null;
+  businessName?: string | null;
+  interestCategory?: string | null;
+}
+
+function toPermissionEntry(
+  raw: Partial<PermissionEntry> & Partial<RawPermissionEntry>
+): PermissionEntry {
+  return {
+    read: Boolean(raw.read ?? raw.canRead),
+    create: Boolean(raw.create ?? raw.canCreate),
+    update: Boolean(raw.update ?? raw.canUpdate),
+    delete: Boolean(raw.delete ?? raw.canDelete),
+    approve: Boolean(raw.approve ?? raw.canApprove),
+  };
+}
+
+export function normalizePermissions(
+  raw: RawPermissionsInput
+): Record<string, PermissionEntry> {
+  if (!raw) return {};
+
+  if (Array.isArray(raw)) {
+    const normalized: Record<string, PermissionEntry> = {};
+    for (const item of raw) {
+      if (item && typeof item.moduleCode === "string" && item.moduleCode.trim()) {
+        normalized[item.moduleCode] = toPermissionEntry(item);
+      }
+    }
+    return normalized;
+  }
+
+  if (typeof raw === "object") {
+    const normalized: Record<string, PermissionEntry> = {};
+    for (const [moduleCode, entry] of Object.entries(raw)) {
+      if (entry && typeof entry === "object") {
+        normalized[moduleCode] = toPermissionEntry(entry);
+      }
+    }
+    return normalized;
+  }
+
+  return {};
+}
+
+export function normalizeAuthUser(payload: RawAuthPayload): AuthUserProfile {
+  if (!payload || typeof payload !== "object") {
+    throw new Error("Respons profil pengguna tidak valid");
+  }
+
+  const rawUser =
+    payload.user && typeof payload.user === "object" ? payload.user : payload;
+
+  if (!rawUser || (!rawUser.id && !rawUser.nim)) {
+    throw new Error("Respons profil pengguna tidak valid");
+  }
+
+  const roleName = String(rawUser.roleName || payload.role?.name || "");
+  const roleId = String(rawUser.roleId || payload.role?.id || "");
+  const roleCode =
+    rawUser.roleCode ||
+    payload.role?.code ||
+    (roleName ? roleName.toLowerCase().replace(/\s+/g, "_") : undefined);
+
+  return {
+    id: String(rawUser.id ?? ""),
+    nim: String(rawUser.nim ?? ""),
+    fullName: String(rawUser.fullName ?? ""),
+    roleId,
+    roleName,
+    roleCode,
+    status: String(rawUser.status ?? "Aktif"),
+    totalScore: rawUser.totalScore ?? payload.totalScore,
+    whatsappNumber: rawUser.whatsappNumber,
+    prodi: rawUser.prodi,
+    fakultas: rawUser.fakultas,
+    instagram: rawUser.instagram,
+    businessName: rawUser.businessName,
+    interestCategory: rawUser.interestCategory,
+    permissions: normalizePermissions(
+      payload.permissions ?? rawUser.permissions
+    ),
+  };
 }
 
 export interface ApiResponse<T> {
