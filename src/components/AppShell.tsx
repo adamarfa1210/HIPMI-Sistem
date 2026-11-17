@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  CalendarDays,
   ExternalLink,
   FolderKanban,
   Globe,
@@ -94,6 +95,7 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
   const canAccessFinance = can("finance", "read") || can("finance", "approve");
   const canAccessTracking = can("tracking", "read");
   const canAccessLeaderboard = can("leaderboard", "read");
+  const canAccessCalendar = can("calendar", "read");
 
   const navLinkClass = (active: boolean) =>
     `flex min-h-[42px] items-center gap-2.5 rounded-[6px] px-3 text-sm font-medium transition ${
@@ -196,11 +198,22 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
               <span>Leaderboard Poin</span>
             </Link>
           ) : null}
+          {canAccessCalendar ? (
+            <Link
+              href="/kalender"
+              onClick={() => setDrawerOpen(false)}
+              className={navLinkClass(pathname.startsWith("/kalender"))}
+            >
+              <CalendarDays className="h-4 w-4 text-[#E3EF26]" />
+              <span>Calendar HIPMI</span>
+            </Link>
+          ) : null}
           {!canAccessKaders &&
           !canAccessFinanceRequest &&
           !canAccessFinance &&
           !canAccessTracking &&
-          !canAccessLeaderboard ? (
+          !canAccessLeaderboard &&
+          !canAccessCalendar ? (
             <div className="rounded-[6px] border border-[#124236] bg-[#0C342C]/60 px-3 py-2.5 text-xs text-[#C7DCD2]">
               Role Anda ({user.roleName}) tidak memiliki akses modul Operasional ERP.
             </div>
