@@ -102,46 +102,47 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
     }`;
 
   const sidebarContent = (
-    <div className="no-scrollbar flex h-full flex-col justify-between gap-6 overflow-y-auto bg-[#06231D] p-4 text-[#FFFDEE]">
-      <div>
-        {/* Dual Logo Brand Header matching FigCraft & Web UKM */}
-        <div className="flex items-center justify-between gap-2 rounded-[8px] border border-[#124236] bg-[#0C342C] px-3 py-2.5">
-          <div className="flex items-center gap-2.5">
-            <img
-              src="/assets/logo-bintang.png"
-              alt="Logo Bintang HIPMI"
-              width={26}
-              height={26}
-              className="h-6.5 w-6.5 shrink-0 object-contain"
-            />
-            <img
-              src="/assets/logo-hipmi-pt-telkom.png"
-              alt="Logo HIPMI PT Telkom"
-              width={28}
-              height={28}
-              className="h-7 w-7 shrink-0 rounded-full object-contain"
-            />
-            <div className="min-w-0 leading-tight">
-              <p className="truncate font-display text-xs font-extrabold text-[#FFFDEE]">
-                HIPMI PT TELKOM
-              </p>
-              <p className="truncate font-display text-[9px] font-bold tracking-[0.06em] text-[#E3EF26]">
-                ERP &amp; CMS INTERNAL
-              </p>
-            </div>
+    <div className="flex h-full flex-col overflow-hidden bg-[#06231D] p-4 text-[#FFFDEE]">
+      {/* Fixed Brand Header Cardbox */}
+      <div className="flex shrink-0 items-center justify-between gap-2 rounded-[8px] border border-[#124236] bg-[#0C342C] px-3 py-2.5">
+        <div className="flex items-center gap-2.5">
+          <img
+            src="/assets/logo-bintang.png"
+            alt="Logo Bintang HIPMI"
+            width={26}
+            height={26}
+            className="h-6.5 w-6.5 shrink-0 object-contain"
+          />
+          <img
+            src="/assets/logo-hipmi-pt-telkom.png"
+            alt="Logo HIPMI PT Telkom"
+            width={28}
+            height={28}
+            className="h-7 w-7 shrink-0 rounded-full object-contain"
+          />
+          <div className="min-w-0 leading-tight">
+            <p className="truncate font-display text-xs font-extrabold text-[#FFFDEE]">
+              HIPMI PT TELKOM
+            </p>
+            <p className="truncate font-display text-[9px] font-bold tracking-[0.06em] text-[#E3EF26]">
+              ERP &amp; CMS INTERNAL
+            </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(false)}
-            className="inline-flex h-8 w-8 items-center justify-center rounded text-[#C7DCD2] hover:text-white lg:hidden"
-            aria-label="Tutup menu"
-          >
-            <X className="h-4 w-4" />
-          </button>
         </div>
+        <button
+          type="button"
+          onClick={() => setDrawerOpen(false)}
+          className="inline-flex h-8 w-8 items-center justify-center rounded text-[#C7DCD2] hover:text-white lg:hidden"
+          aria-label="Tutup menu"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
 
+      {/* Scrollable Modules Section Only (Scrollbar Hidden) */}
+      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto pt-5 pb-3">
         {/* Navigation Sections */}
-        <p className="mb-2 mt-6 px-2 font-display text-[10px] font-bold uppercase tracking-[0.08em] text-[#C7DCD2]">
+        <p className="mb-2 px-2 font-display text-[10px] font-bold uppercase tracking-[0.08em] text-[#C7DCD2]">
           OPERASIONAL ERP
         </p>
         <nav className="space-y-1.5" aria-label="Menu Operasional ERP">
@@ -308,24 +309,26 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
         </div>
       </div>
 
-      {/* User Profile Footer Card */}
-      <div className="rounded-[8px] border border-[#124236] bg-[#0C342C] p-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#076653] font-display text-xs font-extrabold text-[#FFFDEE]">
-            {user.fullName
-              .split(" ")
-              .slice(0, 2)
-              .map((w) => w[0])
-              .join("")
-              .toUpperCase()}
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-xs font-bold text-[#FFFDEE]">
-              {user.fullName}
-            </p>
-            <p className="truncate font-display text-[10px] font-bold text-[#E3EF26]">
-              {user.roleName} • {user.nim}
-            </p>
+      {/* Fixed User Profile Footer Cardbox */}
+      <div className="shrink-0 pt-2">
+        <div className="rounded-[8px] border border-[#124236] bg-[#0C342C] p-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#076653] font-display text-xs font-extrabold text-[#FFFDEE]">
+              {user.fullName
+                .split(" ")
+                .slice(0, 2)
+                .map((w) => w[0])
+                .join("")
+                .toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-xs font-bold text-[#FFFDEE]">
+                {user.fullName}
+              </p>
+              <p className="truncate font-display text-[10px] font-bold text-[#E3EF26]">
+                {user.roleName} • {user.nim}
+              </p>
+            </div>
           </div>
         </div>
       </div>
