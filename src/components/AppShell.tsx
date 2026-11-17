@@ -11,6 +11,7 @@ import {
   LogOut,
   Menu,
   Trophy,
+  Wallet,
   X,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
@@ -85,6 +86,7 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
   }
 
   const canAccessCms = can("cms", "read");
+  const canAccessFinance = can("finance", "read");
   const canAccessTracking = can("tracking", "read");
   const canAccessLeaderboard = can("leaderboard", "read");
 
@@ -139,6 +141,16 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
           OPERASIONAL ERP
         </p>
         <nav className="space-y-1.5" aria-label="Menu Operasional ERP">
+          {canAccessFinance ? (
+            <Link
+              href="/keuangan"
+              onClick={() => setDrawerOpen(false)}
+              className={navLinkClass(pathname.startsWith("/keuangan"))}
+            >
+              <Wallet className="h-4 w-4 text-[#E3EF26]" />
+              <span>Keuangan &amp; Resi Kas</span>
+            </Link>
+          ) : null}
           {canAccessTracking ? (
             <Link
               href="/proker"
@@ -159,9 +171,9 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
               <span>Leaderboard Poin</span>
             </Link>
           ) : null}
-          {!canAccessTracking && !canAccessLeaderboard ? (
+          {!canAccessFinance && !canAccessTracking && !canAccessLeaderboard ? (
             <div className="rounded-[6px] border border-[#124236] bg-[#0C342C]/60 px-3 py-2.5 text-xs text-[#C7DCD2]">
-              Role Anda ({user.roleName}) tidak memiliki akses modul Proker atau Leaderboard.
+              Role Anda ({user.roleName}) tidak memiliki akses modul Keuangan, Proker, atau Leaderboard.
             </div>
           ) : null}
         </nav>

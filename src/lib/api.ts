@@ -301,3 +301,35 @@ export async function uploadMediaFile(params: {
     body: form,
   });
 }
+
+export async function apiDownloadBlob(
+  path: string
+): Promise<{ blob: Blob; filename: string | null }> {
+  const token = getStoredToken();
+  const headers = new Headers();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "GET",
+    headers,
+  });
+
+  if (!res.ok) {
+    const json = (await res.json().catch(() => ({}))) as ApiResponse<unknown>;
+    throw new Error(
+      json?.error?.message ||
+        json?.message ||
+        `Gagal mengunduh berkas (${res.status})`
+    );
+  }
+
+  const disposition = res.headers.get("Content-Disposition") || "";
+  const match = /filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i.exec(disposition);
+  const blob = await res.blob();
+  return {
+    blob,
+    filename: match ? decodeURIComponent(match[1]) : null,
+  };
+}
