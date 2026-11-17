@@ -12,6 +12,7 @@ import {
   LogOut,
   Menu,
   Send,
+  ShieldCheck,
   Trophy,
   Users,
   Wallet,
@@ -96,6 +97,7 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
   const canAccessTracking = can("tracking", "read");
   const canAccessLeaderboard = can("leaderboard", "read");
   const canAccessCalendar = can("calendar", "read");
+  const canAccessSettings = can("admin-rbac", "read");
 
   const navLinkClass = (active: boolean) =>
     `flex min-h-[42px] items-center gap-2.5 rounded-[6px] px-3 text-sm font-medium transition ${
@@ -254,6 +256,16 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
           AKUN &amp; KEAMANAN
         </p>
         <div className="space-y-1.5">
+          {canAccessSettings ? (
+            <Link
+              href="/settings"
+              onClick={() => setDrawerOpen(false)}
+              className={navLinkClass(pathname.startsWith("/settings"))}
+            >
+              <ShieldCheck className="h-4 w-4 text-[#E3EF26]" />
+              <span>Settings Hak Akses</span>
+            </Link>
+          ) : null}
           <button
             type="button"
             onClick={() => {
