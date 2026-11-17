@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
+  ArrowDown,
+  ArrowUp,
   CheckCircle2,
   Edit3,
   Newspaper,
@@ -67,6 +69,7 @@ export default function SettingBeritaPage() {
   const [articles, setArticles] = useState<NewsArticleItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [reordering, setReordering] = useState(false);
   const [toast, setToast] = useState<{ message: string; isError: boolean } | null>(
     null
   );
@@ -193,6 +196,43 @@ export default function SettingBeritaPage() {
     }
   };
 
+  const handleMove = async (index: number, direction: "up" | "down") => {
+    if (!canUpdate || reordering) return;
+    const targetIdx = direction === "up" ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= articles.length) return;
+
+    const next = [...articles];
+    const [moved] = next.splice(index, 1);
+    next.splice(targetIdx, 0, moved);
+    setArticles(next);
+    setReordering(true);
+
+    try {
+      await apiRequest("/api/news/manage/reorder", {
+        method: "PATCH",
+        body: JSON.stringify({ orderedIds: next.map((a) => a.id) }),
+      });
+      notify(`Tingkatan "${moved.title}" dipindahkan ke urutan #${targetIdx + 1}.`);
+      await loadAll();
+    } catch (err: any) {
+      notify(err?.message || "Gagal memperbarui urutan tingkatan berita", true);
+      await loadAll();
+    } finally {
+      setReordering(false);
+    }
+  };
+
+  const publicHeroWinnerId = useMemo(() => {
+    if (audienceFilter || categoryFilter || statusFilter) return null;
+    const pub = articles.filter(
+      (a) =>
+        a.isPublished &&
+        (a.targetAudience === "PUBLIC" || a.targetAudience === "BOTH")
+    );
+    const hero = pub.find((a) => a.isFeatured) ?? pub[0] ?? null;
+    return hero?.id ?? null;
+  }, [articles, audienceFilter, categoryFilter, statusFilter]);
+
   return (
     <AppShell
       title="Setting Berita"
@@ -228,7 +268,7 @@ export default function SettingBeritaPage() {
                   Kelola Berita Internal ERP &amp; Web Profil UKM
                 </h2>
                 <p className="mt-0.5 text-xs text-[#64748B]">
-                  Gunakan tag penempatan (<strong>INTERNAL</strong>, <strong>PUBLIC</strong>, atau <strong>BOTH</strong>) serta opsi <strong>Berita Utama</strong> untuk kotak paling besar di atas grid.
+                  Gunakan panah <strong>&uarr; / &darr;</strong> di kiri list untuk mengatur tingkatan tampil di <strong>Banner Hero</strong> &amp; kotak teratas tab <strong>Semua Berita</strong>, serta tag penempatan (<strong>INTERNAL</strong>, <strong>PUBLIC</strong>, <strong>BOTH</strong>).
                 </p>
               </div>
               {canCreate ? (
@@ -308,14 +348,54 @@ export default function SettingBeritaPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {articles.map((item) => {
+                {articles.map((item, idx) => {
                   const audMeta = NEWS_AUDIENCE_META[item.targetAudience];
+                  const isPublicHeroWinner = publicHeroWinnerId === item.id;
                   return (
                     <div
                       key={item.id}
                       className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#D4E4DC] bg-white p-4 shadow-sm"
                     >
-                      <div className="flex min-w-0 flex-1 items-start gap-4">
+                      <div className="flex min-w-0 flex-1 items-start gap-3.5">
+                        {/* Kontrol Geser Tingkatan Berita di Sisi Kiri */}
+                        <div
+                          aria-label={`Atur tingkatan berita ${item.title}`}
+                          className="flex shrink-0 flex-col items-center gap-1 rounded-xl border border-[#D4E4DC] bg-[#FFFDEE] p-1.5"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => handleMove(idx, "up")}
+                            disabled={!canUpdate || reordering || idx === 0}
+                            title="Geser ke atas (naikkan tingkatan)"
+                            aria-label={`Geser "${item.title}" ke atas`}
+                            className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#D4E4DC] bg-white text-[#06231D] transition hover:border-[#076653] hover:bg-[#076653] hover:text-[#FFFDEE] disabled:cursor-not-allowed disabled:opacity-35"
+                          >
+                            <ArrowUp className="h-3.5 w-3.5" />
+                          </button>
+                          <span
+                            title={`Urutan tingkatan ke-${idx + 1}`}
+                            className={`font-display text-[11px] font-extrabold tabular-nums ${
+                              idx === 0 ? "text-[#076653]" : "text-[#475569]"
+                            }`}
+                          >
+                            #{idx + 1}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleMove(idx, "down")}
+                            disabled={
+                              !canUpdate ||
+                              reordering ||
+                              idx === articles.length - 1
+                            }
+                            title="Geser ke bawah (turunkan tingkatan)"
+                            aria-label={`Geser "${item.title}" ke bawah`}
+                            className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#D4E4DC] bg-white text-[#06231D] transition hover:border-[#076653] hover:bg-[#076653] hover:text-[#FFFDEE] disabled:cursor-not-allowed disabled:opacity-35"
+                          >
+                            <ArrowDown className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+
                         <div className="hidden h-20 w-32 shrink-0 overflow-hidden rounded-xl bg-[#06231D] sm:block">
                           {item.imageSrc ? (
                             <img
@@ -348,6 +428,11 @@ export default function SettingBeritaPage() {
                               <span className="inline-flex items-center gap-1 rounded-full bg-[#06231D] px-2.5 py-0.5 text-[10px] font-bold text-[#E3EF26]">
                                 <Star className="h-3 w-3" />
                                 Berita Utama (Kotak Besar)
+                              </span>
+                            ) : null}
+                            {isPublicHeroWinner ? (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-[#076653] bg-[#076653]/10 px-2.5 py-0.5 text-[10px] font-bold text-[#076653]">
+                                Posisi #1 Banner &amp; Semua Berita Web
                               </span>
                             ) : null}
                             <span

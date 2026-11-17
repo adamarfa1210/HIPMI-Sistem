@@ -68,8 +68,11 @@ export default function BeritaInternalPage() {
     );
   }, [articles, search]);
 
-  const featuredArticle = filtered[0] ?? null;
-  const gridArticles = filtered.slice(1);
+  const featuredArticle =
+    filtered.find((item) => item.isFeatured) ?? filtered[0] ?? null;
+  const gridArticles = featuredArticle
+    ? filtered.filter((item) => item.id !== featuredArticle.id)
+    : [];
 
   return (
     <AppShell title="Berita HIPMI" breadcrumb="Operasional ERP / Berita HIPMI">

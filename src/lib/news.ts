@@ -13,6 +13,7 @@ export interface NewsArticleItem {
   targetAudience: NewsAudience;
   isFeatured: boolean;
   isPublished: boolean;
+  sortOrder?: number;
   publishedAt: string;
   createdBy: string | null;
   authorName: string | null;
