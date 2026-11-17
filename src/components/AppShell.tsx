@@ -102,7 +102,7 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
     }`;
 
   const sidebarContent = (
-    <div className="flex h-full flex-col justify-between gap-6 overflow-y-auto bg-[#06231D] p-4 text-[#FFFDEE]">
+    <div className="no-scrollbar flex h-full flex-col justify-between gap-6 overflow-y-auto bg-[#06231D] p-4 text-[#FFFDEE]">
       <div>
         {/* Dual Logo Brand Header matching FigCraft & Web UKM */}
         <div className="flex items-center justify-between gap-2 rounded-[8px] border border-[#124236] bg-[#0C342C] px-3 py-2.5">
