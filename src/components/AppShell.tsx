@@ -102,7 +102,7 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
     }`;
 
   const sidebarContent = (
-    <div className="flex h-full flex-col justify-between bg-[#06231D] p-4 text-[#FFFDEE]">
+    <div className="flex h-full flex-col justify-between gap-6 overflow-y-auto bg-[#06231D] p-4 text-[#FFFDEE]">
       <div>
         {/* Dual Logo Brand Header matching FigCraft & Web UKM */}
         <div className="flex items-center justify-between gap-2 rounded-[8px] border border-[#124236] bg-[#0C342C] px-3 py-2.5">
@@ -335,8 +335,8 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
   return (
     <div className="flex min-h-screen flex-col bg-[#FFFDEE]">
       <div className="flex flex-1">
-        {/* Desktop Sidebar */}
-        <aside className="hidden w-[260px] shrink-0 border-r border-[#124236] lg:block">
+        {/* Desktop Fixed Sidebar */}
+        <aside className="hidden w-[260px] shrink-0 border-r border-[#124236] lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:block">
           {sidebarContent}
         </aside>
 
@@ -347,14 +347,14 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
               className="fixed inset-0 bg-[#06231D]/60"
               onClick={() => setDrawerOpen(false)}
             />
-            <aside className="relative z-10 w-[276px] max-w-[85vw] border-r border-[#124236]">
+            <aside className="relative z-10 h-full w-[276px] max-w-[85vw] border-r border-[#124236]">
               {sidebarContent}
             </aside>
           </div>
         ) : null}
 
         {/* Main Workspace */}
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col lg:pl-[260px]">
           <header className="flex min-h-[64px] flex-wrap items-center justify-between gap-3 border-b border-[#D4E4DC] bg-[#FFFDEE] px-4 py-3 sm:px-8">
             <div className="flex items-center gap-3">
               <button
