@@ -233,10 +233,24 @@ async function executeApiRequest<T>(
     headers.set("Content-Type", "application/json");
   }
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+    });
+  } catch (err) {
+    if (options.body instanceof FormData) {
+      throw new Error(
+        "Gagal mengunggah file ke server (koneksi terputus atau ukuran file melebihi batas gateway 4,5 MB). Coba kompres ulang atau periksa jaringan Anda."
+      );
+    }
+    throw new Error(
+      err instanceof Error && err.message && err.message !== "Failed to fetch"
+        ? err.message
+        : "Gagal terhubung ke server API. Periksa koneksi internet Anda lalu coba lagi."
+    );
+  }
 
   const json = (await res.json().catch(() => ({}))) as ApiResponse<T>;
   if (!res.ok || !json.success) {

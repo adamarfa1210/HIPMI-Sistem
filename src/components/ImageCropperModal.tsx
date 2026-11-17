@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Cropper, { type Area } from "react-easy-crop";
 import { uploadMediaFile } from "@/lib/api";
 import { CharCounterInput } from "./CharCounterField";
@@ -65,12 +65,26 @@ export const CROP_PRESETS: Record<string, CropPreset> = {
   },
 };
 
+const MAX_RAW_FILE_BYTES = 15 * 1024 * 1024; // Raw foto kamera hingga 15 MB sebelum dipotong & dikompresi
+const MAX_UPLOAD_BYTES = 3.8 * 1024 * 1024; // Batas aman di bawah limit payload serverless Vercel (4.5 MB)
+const MAX_OUTPUT_LONG_EDGE = 1920;
+
+function canvasToBlob(
+  canvas: HTMLCanvasElement,
+  mimeType: string,
+  quality: number
+): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), mimeType, quality);
+  });
+}
+
 async function getCroppedImageBlob(
   imageSrc: string,
   pixelCrop: Area,
   targetMinWidth: number,
   targetMinHeight: number
-): Promise<Blob> {
+): Promise<{ blob: Blob; extension: string }> {
   const image = await new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
@@ -79,8 +93,26 @@ async function getCroppedImageBlob(
     img.src = imageSrc;
   });
 
-  const outWidth = Math.max(Math.round(pixelCrop.width), targetMinWidth);
-  const outHeight = Math.max(Math.round(pixelCrop.height), targetMinHeight);
+  let outWidth = Math.max(Math.round(pixelCrop.width), 1);
+  let outHeight = Math.max(Math.round(pixelCrop.height), 1);
+
+  if (outWidth < targetMinWidth || outHeight < targetMinHeight) {
+    const upScale = Math.max(
+      targetMinWidth / outWidth,
+      targetMinHeight / outHeight
+    );
+    outWidth = Math.round(outWidth * upScale);
+    outHeight = Math.round(outHeight * upScale);
+  } else if (Math.max(outWidth, outHeight) > MAX_OUTPUT_LONG_EDGE) {
+    const minScale = Math.max(
+      targetMinWidth / outWidth,
+      targetMinHeight / outHeight
+    );
+    const desiredScale = MAX_OUTPUT_LONG_EDGE / Math.max(outWidth, outHeight);
+    const scale = Math.min(1, Math.max(minScale, desiredScale));
+    outWidth = Math.max(Math.round(outWidth * scale), targetMinWidth);
+    outHeight = Math.max(Math.round(outHeight * scale), targetMinHeight);
+  }
 
   const canvas = document.createElement("canvas");
   canvas.width = outWidth;
@@ -88,6 +120,8 @@ async function getCroppedImageBlob(
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas context tidak tersedia");
 
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
   ctx.drawImage(
     image,
     pixelCrop.x,
@@ -100,16 +134,35 @@ async function getCroppedImageBlob(
     outHeight
   );
 
-  return new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) reject(new Error("Gagal memproses gambar"));
-        else resolve(blob);
-      },
-      "image/png",
-      0.95
-    );
-  });
+  // Gunakan WebP (mendukung transparansi + ukuran jauh lebih ringkas daripada PNG), lalu fallback JPEG bila perlu
+  const attempts: Array<{ mime: string; ext: string; quality: number }> = [
+    { mime: "image/webp", ext: "webp", quality: 0.88 },
+    { mime: "image/webp", ext: "webp", quality: 0.78 },
+    { mime: "image/webp", ext: "webp", quality: 0.65 },
+    { mime: "image/jpeg", ext: "jpg", quality: 0.85 },
+    { mime: "image/jpeg", ext: "jpg", quality: 0.72 },
+  ];
+
+  let lastBlob: Blob | null = null;
+  let lastExt = "webp";
+
+  for (const step of attempts) {
+    const blob = await canvasToBlob(canvas, step.mime, step.quality);
+    if (!blob || blob.type !== step.mime) continue;
+    lastBlob = blob;
+    lastExt = step.ext;
+    if (blob.size <= MAX_UPLOAD_BYTES) {
+      return { blob, extension: step.ext };
+    }
+  }
+
+  if (lastBlob && lastBlob.size <= 4.3 * 1024 * 1024) {
+    return { blob: lastBlob, extension: lastExt };
+  }
+
+  throw new Error(
+    "Ukuran gambar hasil potong masih terlalu besar (> 4 MB). Coba perbesar zoom atau pilih file dengan ukuran lebih kecil."
+  );
 }
 
 interface ImageCropperModalProps {
@@ -144,14 +197,21 @@ export function ImageCropperModal({
     setCroppedAreaPixels(croppedPixels);
   }, []);
 
+  useEffect(() => {
+    if (open) {
+      setImageAlt(initialAlt);
+      setError(null);
+    }
+  }, [open, initialAlt]);
+
   if (!open) return null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setError(null);
-    if (file.size > 5 * 1024 * 1024) {
-      setError("Ukuran file mentah maksimal 5 MB.");
+    if (file.size > MAX_RAW_FILE_BYTES) {
+      setError("Ukuran file mentah maksimal 15 MB.");
       return;
     }
     setFilename(file.name);
@@ -187,15 +247,16 @@ export function ImageCropperModal({
     setUploading(true);
     setError(null);
     try {
-      const blob = await getCroppedImageBlob(
+      const { blob, extension } = await getCroppedImageBlob(
         imageSrc,
         croppedAreaPixels,
         preset.minWidth,
         preset.minHeight
       );
+      const baseName = filename.replace(/\.[^/.]+$/, "") || "upload";
       const result = await uploadMediaFile({
         file: blob,
-        filename,
+        filename: `${baseName}.${extension}`,
         slot: preset.slot,
         imageAlt: imageAlt.trim(),
       });
@@ -239,7 +300,7 @@ export function ImageCropperModal({
         <div className="space-y-4 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <label className="inline-flex min-h-[40px] cursor-pointer items-center rounded-[6px] border border-[#076653] bg-[#E2FBCE] px-4 font-display text-xs font-bold text-[#06231D] hover:bg-[#d2f7b4]">
-              <span>Pilih File Gambar (.jpg / .png / .webp, Maks 5 MB)</span>
+              <span>Pilih File Gambar (.jpg / .png / .webp, Maks 15 MB)</span>
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
