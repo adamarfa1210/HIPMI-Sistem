@@ -10,6 +10,7 @@ import {
   KeyRound,
   LogOut,
   Menu,
+  Send,
   Trophy,
   Wallet,
   X,
@@ -86,7 +87,9 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
   }
 
   const canAccessCms = can("cms", "read");
-  const canAccessFinance = can("finance", "read");
+  const canAccessFinanceRequest =
+    can("finance-request", "read") || can("finance-request", "create");
+  const canAccessFinance = can("finance", "read") || can("finance", "approve");
   const canAccessTracking = can("tracking", "read");
   const canAccessLeaderboard = can("leaderboard", "read");
 
@@ -141,14 +144,24 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
           OPERASIONAL ERP
         </p>
         <nav className="space-y-1.5" aria-label="Menu Operasional ERP">
+          {canAccessFinanceRequest ? (
+            <Link
+              href="/keuangan/pengajuan"
+              onClick={() => setDrawerOpen(false)}
+              className={navLinkClass(pathname.startsWith("/keuangan/pengajuan"))}
+            >
+              <Send className="h-4 w-4 text-[#E3EF26]" />
+              <span>Pengajuan Keuangan</span>
+            </Link>
+          ) : null}
           {canAccessFinance ? (
             <Link
               href="/keuangan"
               onClick={() => setDrawerOpen(false)}
-              className={navLinkClass(pathname.startsWith("/keuangan"))}
+              className={navLinkClass(pathname === "/keuangan")}
             >
               <Wallet className="h-4 w-4 text-[#E3EF26]" />
-              <span>Keuangan &amp; Resi Kas</span>
+              <span>Persetujuan &amp; Kas</span>
             </Link>
           ) : null}
           {canAccessTracking ? (
@@ -171,9 +184,12 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
               <span>Leaderboard Poin</span>
             </Link>
           ) : null}
-          {!canAccessFinance && !canAccessTracking && !canAccessLeaderboard ? (
+          {!canAccessFinanceRequest &&
+          !canAccessFinance &&
+          !canAccessTracking &&
+          !canAccessLeaderboard ? (
             <div className="rounded-[6px] border border-[#124236] bg-[#0C342C]/60 px-3 py-2.5 text-xs text-[#C7DCD2]">
-              Role Anda ({user.roleName}) tidak memiliki akses modul Keuangan, Proker, atau Leaderboard.
+              Role Anda ({user.roleName}) tidak memiliki akses modul Operasional ERP.
             </div>
           ) : null}
         </nav>

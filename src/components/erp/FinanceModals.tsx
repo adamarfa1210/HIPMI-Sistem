@@ -22,10 +22,14 @@ import {
 
 export function CreateTransactionModal({
   open,
+  submitPath = "/api/finance/transactions",
+  modalTitle = "Catat Transaksi Kas Baru",
   onClose,
   onCreated,
 }: {
   open: boolean;
+  submitPath?: string;
+  modalTitle?: string;
   onClose: () => void;
   onCreated: () => void;
 }) {
@@ -73,7 +77,7 @@ export function CreateTransactionModal({
 
     setSaving(true);
     try {
-      await apiRequest("/api/finance/transactions", {
+      await apiRequest(submitPath, {
         method: "POST",
         body: JSON.stringify({
           type,
@@ -105,7 +109,7 @@ export function CreateTransactionModal({
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-display text-base font-extrabold text-[#06231D]">
-              Catat Transaksi Kas Baru
+              {modalTitle}
             </h2>
             <p className="text-xs text-[#64748B]">
               Transaksi baru berstatus PENDING hingga disetujui oleh pejabat berwenang.
@@ -405,9 +409,11 @@ export function ApprovalModal({
 
 export function ReceiptPreviewModal({
   tx,
+  receiptBasePath = "/api/finance/transactions",
   onClose,
 }: {
   tx: FinanceTransaction | null;
+  receiptBasePath?: string;
   onClose: () => void;
 }) {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -429,7 +435,7 @@ export function ReceiptPreviewModal({
     setPdfUrl(null);
     setPdfBlob(null);
 
-    apiDownloadBlob(`/api/finance/transactions/${tx.id}/receipt`)
+    apiDownloadBlob(`${receiptBasePath}/${tx.id}/receipt`)
       .then(({ blob }) => {
         if (cancelled) return;
         objectUrl = URL.createObjectURL(blob);
@@ -449,7 +455,7 @@ export function ReceiptPreviewModal({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [tx]);
+  }, [tx, receiptBasePath]);
 
   if (!tx) return null;
 

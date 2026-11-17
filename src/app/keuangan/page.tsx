@@ -166,8 +166,8 @@ export default function KeuanganPage() {
 
   return (
     <AppShell
-      title="Keuangan & Resi Kas"
-      breadcrumb="Operasional ERP / Keuangan & Resi Kas"
+      title="Persetujuan & Kas Keuangan"
+      breadcrumb="Operasional ERP / Persetujuan & Kas Keuangan"
     >
       <div className="space-y-6">
         {toast ? (
@@ -197,10 +197,10 @@ export default function KeuanganPage() {
             <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#D4E4DC] bg-white p-5 shadow-sm">
               <div>
                 <h2 className="font-display text-lg font-extrabold text-[#06231D]">
-                  Manajemen Kas Organisasi &amp; Kuitansi Resmi
+                  Persetujuan Pengajuan, Saldo Kas &amp; Kuitansi Resmi
                 </h2>
                 <p className="mt-0.5 text-xs text-[#64748B]">
-                  Hanya transaksi berstatus <strong>APPROVED</strong> yang memengaruhi saldo kas dan menerbitkan resi PDF bernomor urut.
+                  Verifikasi pengajuan transaksi dari tiap role, pantau arus kas <strong>APPROVED</strong>, dan terbitkan resi PDF bernomor urut.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
