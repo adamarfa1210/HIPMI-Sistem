@@ -483,13 +483,13 @@ export function TentangSection({
           </div>
           <div>
             <label className="mb-1 block text-xs font-semibold text-[#06231D]">
-              URL File Video MP4 (Opsional)
+              URL Video YouTube / MP4 (Opsional)
             </label>
             <input
               type="url"
               value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
-              placeholder="https://..."
+              placeholder="https://youtu.be/... atau https://...mp4"
               className="min-h-[42px] w-full rounded-[6px] border border-[#D4E4DC] bg-[#FFFDEE] px-3 text-sm"
             />
           </div>
