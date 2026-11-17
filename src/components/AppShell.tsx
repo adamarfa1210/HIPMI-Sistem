@@ -5,10 +5,12 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   ExternalLink,
+  FolderKanban,
   Globe,
   KeyRound,
   LogOut,
   Menu,
+  Trophy,
   X,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
@@ -83,6 +85,15 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
   }
 
   const canAccessCms = can("cms", "read");
+  const canAccessTracking = can("tracking", "read");
+  const canAccessLeaderboard = can("leaderboard", "read");
+
+  const navLinkClass = (active: boolean) =>
+    `flex min-h-[42px] items-center gap-2.5 rounded-[6px] px-3 text-sm font-medium transition ${
+      active
+        ? "border border-[#E3EF26] bg-[#09352C] text-[#FFFDEE]"
+        : "text-[#C7DCD2] hover:bg-[#0C342C] hover:text-[#FFFDEE]"
+    }`;
 
   const sidebarContent = (
     <div className="flex h-full flex-col justify-between bg-[#06231D] p-4 text-[#FFFDEE]">
@@ -125,6 +136,37 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
 
         {/* Navigation Sections */}
         <p className="mb-2 mt-6 px-2 font-display text-[10px] font-bold uppercase tracking-[0.08em] text-[#C7DCD2]">
+          OPERASIONAL ERP
+        </p>
+        <nav className="space-y-1.5" aria-label="Menu Operasional ERP">
+          {canAccessTracking ? (
+            <Link
+              href="/proker"
+              onClick={() => setDrawerOpen(false)}
+              className={navLinkClass(pathname.startsWith("/proker"))}
+            >
+              <FolderKanban className="h-4 w-4 text-[#E3EF26]" />
+              <span>Proker &amp; Rapat</span>
+            </Link>
+          ) : null}
+          {canAccessLeaderboard ? (
+            <Link
+              href="/leaderboard"
+              onClick={() => setDrawerOpen(false)}
+              className={navLinkClass(pathname.startsWith("/leaderboard"))}
+            >
+              <Trophy className="h-4 w-4 text-[#E3EF26]" />
+              <span>Leaderboard Poin</span>
+            </Link>
+          ) : null}
+          {!canAccessTracking && !canAccessLeaderboard ? (
+            <div className="rounded-[6px] border border-[#124236] bg-[#0C342C]/60 px-3 py-2.5 text-xs text-[#C7DCD2]">
+              Role Anda ({user.roleName}) tidak memiliki akses modul Proker atau Leaderboard.
+            </div>
+          ) : null}
+        </nav>
+
+        <p className="mb-2 mt-6 px-2 font-display text-[10px] font-bold uppercase tracking-[0.08em] text-[#C7DCD2]">
           KONTEN &amp; WEBSITE
         </p>
         <nav className="space-y-1.5" aria-label="Menu Portal">
@@ -132,11 +174,7 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
             <Link
               href="/cms"
               onClick={() => setDrawerOpen(false)}
-              className={`flex min-h-[42px] items-center gap-2.5 rounded-[6px] px-3 text-sm font-medium transition ${
-                pathname.startsWith("/cms")
-                  ? "border border-[#E3EF26] bg-[#09352C] text-[#FFFDEE]"
-                  : "text-[#C7DCD2] hover:bg-[#0C342C] hover:text-[#FFFDEE]"
-              }`}
+              className={navLinkClass(pathname.startsWith("/cms"))}
             >
               <Globe className="h-4 w-4 text-[#E3EF26]" />
               <span>UKM Profile CMS</span>

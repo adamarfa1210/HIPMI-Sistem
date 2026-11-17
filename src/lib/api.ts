@@ -187,10 +187,18 @@ export function hasPermission(
   return Boolean(user.permissions?.[moduleCode]?.[action]);
 }
 
+export interface ApiMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   message?: string;
   data: T;
+  meta?: ApiMeta;
   error?: {
     code: string;
     message: string;
@@ -212,10 +220,10 @@ export function setStoredToken(token: string | null): void {
   }
 }
 
-export async function apiRequest<T>(
+async function executeApiRequest<T>(
   path: string,
   options: RequestInit = {}
-): Promise<T> {
+): Promise<ApiResponse<T>> {
   const token = getStoredToken();
   const headers = new Headers(options.headers || {});
   if (token && !headers.has("Authorization")) {
@@ -239,7 +247,31 @@ export async function apiRequest<T>(
     throw new Error(errMsg);
   }
 
+  return json;
+}
+
+export async function apiRequest<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const json = await executeApiRequest<T>(path, options);
   return json.data;
+}
+
+export async function apiRequestWithMeta<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<{ data: T; meta: ApiMeta }> {
+  const json = await executeApiRequest<T>(path, options);
+  return {
+    data: json.data,
+    meta: json.meta ?? {
+      page: 1,
+      limit: 20,
+      total: Array.isArray(json.data) ? json.data.length : 0,
+      totalPages: 1,
+    },
+  };
 }
 
 export interface MediaUploadResult {
