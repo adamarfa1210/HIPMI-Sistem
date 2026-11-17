@@ -11,6 +11,8 @@ import {
   KeyRound,
   LogOut,
   Menu,
+  Newspaper,
+  PenSquare,
   Send,
   ShieldCheck,
   Trophy,
@@ -35,7 +37,6 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [tickerText, setTickerText] = useState<string | null>(null);
   const [pwModalOpen, setPwModalOpen] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -47,17 +48,6 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
       router.replace("/login");
     }
   }, [loading, user, router]);
-
-  useEffect(() => {
-    if (!user) return;
-    apiRequest<any[]>("/api/cms/announcements?isActive=true")
-      .then((list) => {
-        if (Array.isArray(list) && list.length > 0) {
-          setTickerText(`${list[0].title} — ${list[0].content}`);
-        }
-      })
-      .catch(() => {});
-  }, [user]);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,6 +80,11 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
   }
 
   const canAccessCms = can("cms", "read");
+  const canAccessNews = can("news", "read");
+  const canAccessNewsManage =
+    can("news-manage", "read") ||
+    can("news-manage", "create") ||
+    can("news-manage", "update");
   const canAccessKaders = can("kaders", "read");
   const canAccessFinanceRequest =
     can("finance-request", "read") || can("finance-request", "create");
@@ -210,12 +205,23 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
               <span>Calendar HIPMI</span>
             </Link>
           ) : null}
+          {canAccessNews ? (
+            <Link
+              href="/berita"
+              onClick={() => setDrawerOpen(false)}
+              className={navLinkClass(pathname === "/berita")}
+            >
+              <Newspaper className="h-4 w-4 text-[#E3EF26]" />
+              <span>Berita HIPMI</span>
+            </Link>
+          ) : null}
           {!canAccessKaders &&
           !canAccessFinanceRequest &&
           !canAccessFinance &&
           !canAccessTracking &&
           !canAccessLeaderboard &&
-          !canAccessCalendar ? (
+          !canAccessCalendar &&
+          !canAccessNews ? (
             <div className="rounded-[6px] border border-[#124236] bg-[#0C342C]/60 px-3 py-2.5 text-xs text-[#C7DCD2]">
               Role Anda ({user.roleName}) tidak memiliki akses modul Operasional ERP.
             </div>
@@ -235,11 +241,22 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
               <Globe className="h-4 w-4 text-[#E3EF26]" />
               <span>UKM Profile CMS</span>
             </Link>
-          ) : (
+          ) : null}
+          {canAccessNewsManage ? (
+            <Link
+              href="/berita/kelola"
+              onClick={() => setDrawerOpen(false)}
+              className={navLinkClass(pathname.startsWith("/berita/kelola"))}
+            >
+              <PenSquare className="h-4 w-4 text-[#E3EF26]" />
+              <span>Setting Berita</span>
+            </Link>
+          ) : null}
+          {!canAccessCms && !canAccessNewsManage ? (
             <div className="rounded-[6px] border border-[#124236] bg-[#0C342C]/60 px-3 py-2.5 text-xs text-[#C7DCD2]">
-              Role Anda ({user.roleName}) tidak memiliki izin baca modul CMS.
+              Role Anda ({user.roleName}) tidak memiliki izin kelola konten CMS atau Berita.
             </div>
-          )}
+          ) : null}
 
           <a
             href={PUBLIC_WEB_URL}
@@ -317,22 +334,6 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#FFFDEE]">
-      {/* Top Announcement Ticker */}
-      <div className="flex min-h-[36px] items-center justify-between gap-4 border-b border-[#124236] bg-[#06231D] px-4 py-1.5 text-xs text-[#FFFDEE]">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="shrink-0 rounded-[4px] bg-[#E3EF26] px-2 py-0.5 font-display text-[10px] font-bold text-[#06231D]">
-            INFO TERKINI
-          </span>
-          <p className="truncate text-[#FFFDEE]">
-            {tickerText ||
-              "CMS Publikasi Profil UKM aktif • Perubahan otomatis disinkronkan ke Web Profil Publik"}
-          </p>
-        </div>
-        <span className="hidden shrink-0 text-[11px] text-[#C7DCD2] sm:inline">
-          ● Supabase Connected
-        </span>
-      </div>
-
       <div className="flex flex-1">
         {/* Desktop Sidebar */}
         <aside className="hidden w-[260px] shrink-0 border-r border-[#124236] lg:block">

@@ -58,7 +58,7 @@ const CMS_TABS: Array<{
   { key: "achievements", number: 5, label: "Prestasi", icon: Award },
   { key: "program-kerja", number: 6, label: "Program Kerja", icon: FolderKanban },
   { key: "testimonials", number: 7, label: "Testimoni", icon: MessageSquareQuote },
-  { key: "settings", number: 8, label: "Settings & Info Berita", icon: Settings },
+  { key: "settings", number: 8, label: "Settings Web & Kontak", icon: Settings },
 ];
 
 export default function CmsPage() {

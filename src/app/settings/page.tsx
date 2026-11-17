@@ -87,6 +87,8 @@ const MODULE_ORDER = [
   "calendar",
   "documents",
   "cms",
+  "news",
+  "news-manage",
   "admin-rbac",
 ];
 

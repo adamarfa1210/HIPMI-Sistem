@@ -5,7 +5,6 @@ import {
   ChevronDown,
   ChevronRight,
   ImagePlus,
-  Megaphone,
   Plus,
   RefreshCw,
   Save,
@@ -886,16 +885,6 @@ interface SiteSettingsData {
   googleDocsTemplateUrl: string;
 }
 
-interface AnnouncementItem {
-  id: string;
-  title: string;
-  content: string;
-  targetAudience: "INTERNAL" | "PUBLIC" | "BOTH";
-  startDate: string;
-  endDate: string;
-  isActive: boolean;
-}
-
 export function SiteSettingsAnnouncementsSection({
   canWrite,
   canDelete,
@@ -917,28 +906,12 @@ export function SiteSettingsAnnouncementsSection({
     googleDocsTemplateUrl: "",
   });
 
-  const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
-  const [editingAnn, setEditingAnn] = useState<{
-    id?: string;
-    title: string;
-    content: string;
-    targetAudience: "INTERNAL" | "PUBLIC" | "BOTH";
-    startDate: string;
-    endDate: string;
-    isActive: boolean;
-  } | null>(null);
-
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [settingsRes, annRes] = await Promise.all([
-        apiRequest<{ data?: Partial<SiteSettingsData> } & Partial<SiteSettingsData>>(
-          "/api/cms/settings"
-        ),
-        apiRequest<{ data?: AnnouncementItem[] } | AnnouncementItem[]>(
-          "/api/cms/announcements"
-        ),
-      ]);
+      const settingsRes = await apiRequest<
+        { data?: Partial<SiteSettingsData> } & Partial<SiteSettingsData>
+      >("/api/cms/settings");
 
       const s = settingsRes.data ? settingsRes.data : settingsRes;
       setSettings({
@@ -953,9 +926,6 @@ export function SiteSettingsAnnouncementsSection({
         ctaAchievementHref: s.ctaAchievementHref || "/prestasi",
         googleDocsTemplateUrl: s.googleDocsTemplateUrl || "",
       });
-
-      const list = Array.isArray(annRes) ? annRes : annRes.data || [];
-      setAnnouncements(list);
     } catch (err) {
       onNotify(
         err instanceof Error ? err.message : "Gagal memuat Site Settings",
@@ -996,68 +966,10 @@ export function SiteSettingsAnnouncementsSection({
     }
   };
 
-  const handleSaveAnnouncement = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingAnn || !canWrite) return;
-    setSaving(true);
-    try {
-      const payload = {
-        title: editingAnn.title,
-        content: editingAnn.content,
-        targetAudience: editingAnn.targetAudience,
-        startDate: new Date(editingAnn.startDate).toISOString(),
-        endDate: new Date(editingAnn.endDate).toISOString(),
-        isActive: editingAnn.isActive,
-      };
-      if (editingAnn.id) {
-        await apiRequest(`/api/cms/announcements/${editingAnn.id}`, {
-          method: "PATCH",
-          body: JSON.stringify(payload),
-        });
-        onNotify("Info berita berhasil diperbarui.");
-      } else {
-        await apiRequest("/api/cms/announcements", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
-        onNotify("Info berita baru berhasil dipublikasikan.");
-      }
-      setEditingAnn(null);
-      await loadAll();
-    } catch (err) {
-      onNotify(
-        err instanceof Error ? err.message : "Gagal menyimpan info berita",
-        true
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDeleteAnnouncement = async (item: AnnouncementItem) => {
-    if (!canDelete) return;
-    if (!window.confirm(`Hapus info berita "${item.title}"?`)) return;
-    setSaving(true);
-    try {
-      await apiRequest(`/api/cms/announcements/${item.id}`, {
-        method: "DELETE",
-      });
-      onNotify("Info berita dihapus.");
-      await loadAll();
-    } catch (err) {
-      onNotify(
-        err instanceof Error ? err.message : "Gagal menghapus info berita",
-        true
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="rounded-2xl border border-[#CBD5E1] bg-white p-8 text-sm text-[#64748B]">
-        Memuat Site Settings &amp; Header Info Berita...
+        Memuat Site Settings &amp; Kontak Web...
       </div>
     );
   }
@@ -1247,248 +1159,6 @@ export function SiteSettingsAnnouncementsSection({
           </div>
         </div>
       </form>
-
-      {/* Announcements / Header Info Berita Card */}
-      <div className="rounded-2xl border border-[#CBD5E1] bg-white p-6 shadow-sm">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#E3EF26]/40 text-[#06231D]">
-              <Megaphone className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-[#06231D]">
-                Header Info Berita (Ticker Web UKM &amp; Pengumuman)
-              </h3>
-              <p className="text-xs text-[#64748B]">
-                Target <code>PUBLIC</code> atau <code>BOTH</code> tampil di ticker INFO TERKINI pada Navbar Web UKM.
-              </p>
-            </div>
-          </div>
-
-          {canWrite && (
-            <button
-              type="button"
-              onClick={() => {
-                const now = new Date();
-                const nextWeek = new Date(now.getTime() + 7 * 86400000);
-                setEditingAnn({
-                  title: "",
-                  content: "",
-                  targetAudience: "PUBLIC",
-                  startDate: now.toISOString().slice(0, 16),
-                  endDate: nextWeek.toISOString().slice(0, 16),
-                  isActive: true,
-                });
-              }}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#076653] px-4 py-2 text-xs font-bold text-white hover:bg-[#06231D]"
-            >
-              <Plus className="h-4 w-4" />
-              Tambah Info Berita
-            </button>
-          )}
-        </div>
-
-        <div className="space-y-3">
-          {announcements.length === 0 && (
-            <p className="text-xs text-[#64748B]">
-              Belum ada info berita atau pengumuman terjadwal.
-            </p>
-          )}
-          {announcements.map((ann) => (
-            <div
-              key={ann.id}
-              className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-md bg-[#06231D] px-2 py-0.5 text-[10px] font-bold text-[#E3EF26]">
-                    {ann.targetAudience}
-                  </span>
-                  <span
-                    className={`rounded-md px-2 py-0.5 text-[10px] font-semibold ${
-                      ann.isActive
-                        ? "bg-emerald-100 text-emerald-800"
-                        : "bg-slate-200 text-slate-600"
-                    }`}
-                  >
-                    {ann.isActive ? "Aktif" : "Nonaktif"}
-                  </span>
-                  <span className="text-[11px] text-[#64748B]">
-                    {new Date(ann.startDate).toLocaleDateString("id-ID")} –{" "}
-                    {new Date(ann.endDate).toLocaleDateString("id-ID")}
-                  </span>
-                </div>
-                <h4 className="mt-1.5 text-sm font-bold text-[#06231D]">
-                  {ann.title}
-                </h4>
-                <p className="mt-0.5 text-xs text-[#475569]">{ann.content}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {canWrite && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setEditingAnn({
-                        id: ann.id,
-                        title: ann.title,
-                        content: ann.content,
-                        targetAudience: ann.targetAudience,
-                        startDate: new Date(ann.startDate)
-                          .toISOString()
-                          .slice(0, 16),
-                        endDate: new Date(ann.endDate)
-                          .toISOString()
-                          .slice(0, 16),
-                        isActive: ann.isActive,
-                      })
-                    }
-                    className="rounded-lg border border-[#CBD5E1] bg-white px-3 py-1.5 text-xs font-semibold text-[#06231D] hover:bg-[#F1F5F9]"
-                  >
-                    Edit
-                  </button>
-                )}
-                {canDelete && (
-                  <button
-                    type="button"
-                    onClick={() => void handleDeleteAnnouncement(ann)}
-                    className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100"
-                  >
-                    Hapus
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Announcement Modal */}
-      {editingAnn && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <form
-            onSubmit={handleSaveAnnouncement}
-            className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"
-          >
-            <h3 className="mb-4 text-base font-bold text-[#06231D]">
-              {editingAnn.id ? "Edit Info Berita" : "Tambah Info Berita"}
-            </h3>
-            <div className="space-y-4">
-              <CharCounterInput
-                label="Judul Info Berita (5–120 karakter)"
-                value={editingAnn.title}
-                onChange={(v) =>
-                  setEditingAnn((p) => (p ? { ...p, title: v } : p))
-                }
-                maxLength={120}
-                required
-              />
-              <CharCounterTextarea
-                label="Isi Berita (10–2000 karakter)"
-                value={editingAnn.content}
-                onChange={(v) =>
-                  setEditingAnn((p) => (p ? { ...p, content: v } : p))
-                }
-                maxLength={2000}
-                rows={4}
-                required
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs font-bold text-[#06231D]">
-                    Target Audiens
-                  </label>
-                  <select
-                    value={editingAnn.targetAudience}
-                    onChange={(e) =>
-                      setEditingAnn((p) =>
-                        p
-                          ? {
-                              ...p,
-                              targetAudience: e.target.value as
-                                | "INTERNAL"
-                                | "PUBLIC"
-                                | "BOTH",
-                            }
-                          : p
-                      )
-                    }
-                    className="h-10 w-full rounded-xl border border-[#CBD5E1] px-3 text-xs text-[#06231D]"
-                  >
-                    <option value="PUBLIC">PUBLIC (Web UKM)</option>
-                    <option value="BOTH">BOTH (Web UKM &amp; ERP)</option>
-                    <option value="INTERNAL">INTERNAL (ERP Only)</option>
-                  </select>
-                </div>
-                <div className="flex items-end pb-2">
-                  <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-[#06231D]">
-                    <input
-                      type="checkbox"
-                      checked={editingAnn.isActive}
-                      onChange={(e) =>
-                        setEditingAnn((p) =>
-                          p ? { ...p, isActive: e.target.checked } : p
-                        )
-                      }
-                      className="h-4 w-4 accent-[#076653]"
-                    />
-                    Aktif Ditampilkan
-                  </label>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs font-bold text-[#06231D]">
-                    Mulai Tayang
-                  </label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={editingAnn.startDate}
-                    onChange={(e) =>
-                      setEditingAnn((p) =>
-                        p ? { ...p, startDate: e.target.value } : p
-                      )
-                    }
-                    className="h-10 w-full rounded-xl border border-[#CBD5E1] px-3 text-xs text-[#06231D]"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-bold text-[#06231D]">
-                    Berakhir Tayang
-                  </label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={editingAnn.endDate}
-                    onChange={(e) =>
-                      setEditingAnn((p) =>
-                        p ? { ...p, endDate: e.target.value } : p
-                      )
-                    }
-                    className="h-10 w-full rounded-xl border border-[#CBD5E1] px-3 text-xs text-[#06231D]"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="mt-6 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setEditingAnn(null)}
-                className="rounded-xl border border-[#CBD5E1] px-4 py-2 text-xs font-bold text-[#475569]"
-              >
-                Batal
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="rounded-xl bg-[#E3EF26] px-5 py-2 text-xs font-bold text-[#06231D] disabled:opacity-50"
-              >
-                {saving ? "Menyimpan..." : "Simpan Info Berita"}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
     </div>
   );
 }
