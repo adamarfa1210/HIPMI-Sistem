@@ -12,6 +12,7 @@ import {
   Menu,
   Send,
   Trophy,
+  Users,
   Wallet,
   X,
 } from "lucide-react";
@@ -87,6 +88,7 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
   }
 
   const canAccessCms = can("cms", "read");
+  const canAccessKaders = can("kaders", "read");
   const canAccessFinanceRequest =
     can("finance-request", "read") || can("finance-request", "create");
   const canAccessFinance = can("finance", "read") || can("finance", "approve");
@@ -144,6 +146,16 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
           OPERASIONAL ERP
         </p>
         <nav className="space-y-1.5" aria-label="Menu Operasional ERP">
+          {canAccessKaders ? (
+            <Link
+              href="/kader"
+              onClick={() => setDrawerOpen(false)}
+              className={navLinkClass(pathname.startsWith("/kader"))}
+            >
+              <Users className="h-4 w-4 text-[#E3EF26]" />
+              <span>Master Kader</span>
+            </Link>
+          ) : null}
           {canAccessFinanceRequest ? (
             <Link
               href="/keuangan/pengajuan"
@@ -184,7 +196,8 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
               <span>Leaderboard Poin</span>
             </Link>
           ) : null}
-          {!canAccessFinanceRequest &&
+          {!canAccessKaders &&
+          !canAccessFinanceRequest &&
           !canAccessFinance &&
           !canAccessTracking &&
           !canAccessLeaderboard ? (
