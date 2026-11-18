@@ -188,12 +188,18 @@ export default function LengkapiAkunPage() {
                 </p>
               </div>
               <div>
+                <p className="text-[#64748B]">Role Jabatan (Read-Only)</p>
+                <p className="mt-0.5 font-bold text-[#076653]">
+                  {user.roleName}
+                </p>
+              </div>
+              <div>
                 <p className="text-[#64748B]">Prodi / Fakultas</p>
                 <p className="mt-0.5 font-semibold text-[#06231D]">
                   {user.prodi || "-"} / {user.fakultas || "-"}
                 </p>
               </div>
-              <div>
+              <div className="sm:col-span-2">
                 <p className="text-[#64748B]">Kategori Minat</p>
                 <p className="mt-0.5 font-semibold text-[#06231D]">
                   {user.interestCategory || "-"}
@@ -210,6 +216,42 @@ export default function LengkapiAkunPage() {
                   <h2 className="font-display text-xs font-extrabold uppercase tracking-[0.06em] text-[#076653]">
                     Biodata Kader
                   </h2>
+                </div>
+
+                {/* Read-Only Account Identity */}
+                <div className="grid gap-4 rounded-xl border border-[#D4E4DC] bg-[#F8FAFC] p-3.5 sm:grid-cols-2">
+                  <div>
+                    <label
+                      htmlFor="readonly-nim"
+                      className="mb-1 block text-xs font-bold text-[#475569]"
+                    >
+                      NIM Akun (Read-Only)
+                    </label>
+                    <input
+                      id="readonly-nim"
+                      type="text"
+                      readOnly
+                      disabled
+                      value={user.nim}
+                      className="min-h-[40px] w-full cursor-not-allowed rounded-[8px] border border-[#CBD5E1] bg-[#E2E8F0]/70 px-3 text-sm font-bold tabular-nums text-[#06231D]"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="readonly-role"
+                      className="mb-1 block text-xs font-bold text-[#475569]"
+                    >
+                      Role Jabatan (Read-Only)
+                    </label>
+                    <input
+                      id="readonly-role"
+                      type="text"
+                      readOnly
+                      disabled
+                      value={user.roleName}
+                      className="min-h-[40px] w-full cursor-not-allowed rounded-[8px] border border-[#CBD5E1] bg-[#E2E8F0]/70 px-3 text-sm font-bold text-[#076653]"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">

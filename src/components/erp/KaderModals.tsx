@@ -501,13 +501,16 @@ export function ResetPasswordModal({
 
 export function ImportKaderModal({
   open,
+  roles,
   onClose,
   onImported,
 }: {
   open: boolean;
+  roles: RoleOption[];
   onClose: () => void;
   onImported: (result: KaderImportResult) => void;
 }) {
+  const [roleId, setRoleId] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<KaderImportResult | null>(null);
@@ -515,10 +518,13 @@ export function ImportKaderModal({
 
   useEffect(() => {
     if (!open) return;
+    const defaultRole =
+      roles.find((r) => r.name.toLowerCase() === "kader 1") || roles[0];
+    setRoleId(defaultRole?.id || "");
     setFile(null);
     setResult(null);
     setError(null);
-  }, [open]);
+  }, [open, roles]);
 
   if (!open) return null;
 
@@ -530,6 +536,9 @@ export function ImportKaderModal({
     try {
       const form = new FormData();
       form.append("file", file);
+      if (roleId) {
+        form.append("roleId", roleId);
+      }
       const res = await apiRequest<KaderImportResult>("/api/kaders/import", {
         method: "POST",
         body: form,
@@ -556,7 +565,7 @@ export function ImportKaderModal({
               Import Massal Kader (Khusus NIM)
             </h2>
             <p className="text-xs text-[#64748B]">
-              NIM baru otomatis dibuat dengan <strong>Password = NIM</strong> &amp; role default <strong>Kader 1</strong> (wajib lengkapi data &amp; ubah password saat login pertama). NIM yang sudah terdaftar otomatis di-skip.
+              NIM baru otomatis dibuat dengan <strong>Password = NIM</strong> &amp; role sesuai pilihan di bawah (wajib lengkapi data &amp; ubah password saat login pertama). NIM yang sudah terdaftar otomatis di-skip.
             </p>
           </div>
           <button
@@ -584,6 +593,27 @@ export function ImportKaderModal({
         </div>
 
         <form onSubmit={handleImport} className="space-y-3">
+          <div>
+            <label
+              htmlFor="import-kader-role"
+              className="mb-1 block text-xs font-bold text-[#06231D]"
+            >
+              Pilih Role untuk Kader Baru *
+            </label>
+            <select
+              id="import-kader-role"
+              required
+              value={roleId}
+              onChange={(e) => setRoleId(e.target.value)}
+              className="min-h-[40px] w-full rounded-[8px] border border-[#D4E4DC] bg-[#FFFDEE] px-3 text-xs font-semibold text-[#06231D]"
+            >
+              {roles.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+          </div>
           <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#CBD5E1] bg-[#F8FAFC] p-5 text-center hover:border-[#076653]">
             <FileSpreadsheet className="h-7 w-7 text-[#076653]" />
             <span className="mt-2 text-xs font-bold text-[#06231D]">

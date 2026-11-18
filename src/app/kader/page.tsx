@@ -638,6 +638,7 @@ export default function MasterKaderPage() {
 
       <ImportKaderModal
         open={importOpen}
+        roles={roles}
         onClose={() => setImportOpen(false)}
         onImported={async () => {
           await loadKaders();
