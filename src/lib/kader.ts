@@ -33,6 +33,7 @@ export interface KaderRecord {
 export interface KaderImportResult {
   totalProcessed: number;
   created: number;
+  skipped?: number;
   updated: number;
   failed: number;
   errors: Array<{ row: number; nim?: string; error: string }>;
@@ -74,31 +75,7 @@ export const INTEREST_BADGE_MAP: Record<KaderInterestCategory, string> = {
 };
 
 export function downloadKaderImportTemplateCsv(): void {
-  const headers = [
-    "NIM",
-    "Nama Lengkap",
-    "WhatsApp",
-    "Prodi",
-    "Fakultas",
-    "Instagram",
-    "Nama Bisnis",
-    "Kategori Minat",
-    "Status",
-    "Role",
-  ];
-  const sampleRow = [
-    "1201240001",
-    "Contoh Nama Kader",
-    "081234567890",
-    "S1 Sistem Informasi",
-    "Fakultas Rekayasa Industri",
-    "@hipmipttelkom",
-    "Usaha Kuliner Contoh",
-    "Punya Bisnis",
-    "Aktif",
-    "Kader 1",
-  ];
-  const csv = [headers.join(","), sampleRow.join(",")].join("\n");
+  const csv = ["NIM", "1201240001", "1201240002"].join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

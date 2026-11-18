@@ -22,9 +22,9 @@ import {
 interface AuthContextValue {
   user: AuthUserProfile | null;
   loading: boolean;
-  login: (nim: string, password: string) => Promise<void>;
+  login: (nim: string, password: string) => Promise<AuthUserProfile>;
   logout: () => void;
-  refreshMe: () => Promise<void>;
+  refreshMe: () => Promise<AuthUserProfile | null>;
   can: (moduleCode: string, action: keyof PermissionEntry) => boolean;
 }
 
@@ -35,22 +35,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const authEpochRef = useRef(0);
 
-  const refreshMe = useCallback(async () => {
+  const refreshMe = useCallback(async (): Promise<AuthUserProfile | null> => {
     const epoch = ++authEpochRef.current;
     const token = getStoredToken();
     if (!token) {
       setUser(null);
       setLoading(false);
-      return;
+      return null;
     }
     try {
       const data = await apiRequest<RawAuthPayload>("/api/auth/me");
-      if (authEpochRef.current !== epoch) return;
-      setUser(normalizeAuthUser(data));
+      if (authEpochRef.current !== epoch) return null;
+      const normalized = normalizeAuthUser(data);
+      setUser(normalized);
+      return normalized;
     } catch {
-      if (authEpochRef.current !== epoch) return;
+      if (authEpochRef.current !== epoch) return null;
       setStoredToken(null);
       setUser(null);
+      return null;
     } finally {
       if (authEpochRef.current === epoch) {
         setLoading(false);
@@ -62,20 +65,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshMe();
   }, [refreshMe]);
 
-  const login = useCallback(async (nim: string, password: string) => {
+  const login = useCallback(async (nim: string, password: string): Promise<AuthUserProfile> => {
     const epoch = ++authEpochRef.current;
     try {
       const data = await apiRequest<RawAuthPayload>("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ nim, password }),
       });
-      if (authEpochRef.current !== epoch) return;
       if (!data.accessToken) {
         throw new Error("Token autentikasi tidak ditemukan pada respons login");
       }
       const normalizedUser = normalizeAuthUser(data);
       setStoredToken(data.accessToken);
-      setUser(normalizedUser);
+      if (authEpochRef.current === epoch) {
+        setUser(normalizedUser);
+      }
+      return normalizedUser;
     } finally {
       if (authEpochRef.current === epoch) {
         setLoading(false);

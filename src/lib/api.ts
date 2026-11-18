@@ -34,6 +34,8 @@ export type RawPermissionsInput =
   | null
   | undefined;
 
+export type OnboardingMode = "none" | "complete-profile" | "reset-password";
+
 export interface AuthUserProfile {
   id: string;
   nim: string;
@@ -43,6 +45,8 @@ export interface AuthUserProfile {
   roleCode?: string;
   status: string;
   totalScore?: number;
+  profileCompleted?: boolean;
+  onboardingMode?: OnboardingMode;
   whatsappNumber?: string | null;
   prodi?: string | null;
   fakultas?: string | null;
@@ -64,6 +68,8 @@ export interface RawAuthPayload {
   };
   permissions?: RawPermissionsInput;
   totalScore?: number;
+  profileCompleted?: boolean;
+  onboardingMode?: OnboardingMode;
   id?: string;
   nim?: string;
   fullName?: string;
@@ -160,6 +166,8 @@ export function normalizeAuthUser(payload: RawAuthPayload): AuthUserProfile {
     roleCode,
     status: String(rawUser.status ?? "Aktif"),
     totalScore: rawUser.totalScore ?? payload.totalScore,
+    profileCompleted: rawUser.profileCompleted ?? payload.profileCompleted ?? true,
+    onboardingMode: rawUser.onboardingMode ?? payload.onboardingMode ?? "none",
     whatsappNumber: rawUser.whatsappNumber,
     prodi: rawUser.prodi,
     fakultas: rawUser.fakultas,
@@ -170,6 +178,30 @@ export function normalizeAuthUser(payload: RawAuthPayload): AuthUserProfile {
       payload.permissions ?? rawUser.permissions
     ),
   };
+}
+
+export function getDefaultLandingRoute(user: AuthUserProfile | null): string {
+  if (!user) return "/login";
+  if (user.onboardingMode && user.onboardingMode !== "none") {
+    return "/lengkapi-akun";
+  }
+  const routePriority: Array<[string, string]> = [
+    ["cms", "/cms"],
+    ["kaders", "/kader"],
+    ["news", "/berita"],
+    ["tracking", "/proker"],
+    ["leaderboard", "/leaderboard"],
+    ["calendar", "/kalender"],
+    ["finance-request", "/keuangan/pengajuan"],
+    ["finance", "/keuangan"],
+    ["password-reset", "/reset-password"],
+    ["news-manage", "/berita/kelola"],
+    ["admin-rbac", "/settings"],
+  ];
+  for (const [mod, route] of routePriority) {
+    if (hasPermission(user, mod, "read")) return route;
+  }
+  return "/berita";
 }
 
 export function hasPermission(

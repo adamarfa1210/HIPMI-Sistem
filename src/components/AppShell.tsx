@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -14,6 +14,7 @@ import {
   Newspaper,
   PenSquare,
   Send,
+  ShieldAlert,
   ShieldCheck,
   Trophy,
   Users,
@@ -42,12 +43,45 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
   const [newPassword, setNewPassword] = useState("");
   const [pwMsg, setPwMsg] = useState<string | null>(null);
   const [pwErr, setPwErr] = useState<string | null>(null);
+  const [pendingResetCount, setPendingResetCount] = useState<number>(0);
+
+  const canAccessPasswordReset = can("password-reset", "read");
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (loading) return;
+    if (!user) {
       router.replace("/login");
+      return;
+    }
+    if (user.onboardingMode && user.onboardingMode !== "none") {
+      router.replace("/lengkapi-akun");
     }
   }, [loading, user, router]);
+
+  const loadPendingResetCount = useCallback(async () => {
+    if (!user || !canAccessPasswordReset || (user.onboardingMode && user.onboardingMode !== "none")) {
+      return;
+    }
+    try {
+      const res = await apiRequest<{ pendingCount: number }>(
+        "/api/password-resets/pending-count"
+      );
+      setPendingResetCount(res.pendingCount ?? 0);
+    } catch {
+      // Abaikan diam-diam agar sidebar tetap responsif
+    }
+  }, [user, canAccessPasswordReset]);
+
+  useEffect(() => {
+    loadPendingResetCount();
+    const handler = () => {
+      loadPendingResetCount();
+    };
+    window.addEventListener("hipmi:password-reset-updated", handler);
+    return () => {
+      window.removeEventListener("hipmi:password-reset-updated", handler);
+    };
+  }, [loadPendingResetCount]);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +100,7 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
     }
   };
 
-  if (loading || !user) {
+  if (loading || !user || (user.onboardingMode && user.onboardingMode !== "none")) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#FFFDEE]">
         <div className="space-y-3 text-center">
@@ -274,6 +308,32 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
           AKUN &amp; KEAMANAN
         </p>
         <div className="space-y-1.5">
+          {canAccessPasswordReset ? (
+            <Link
+              href="/reset-password"
+              onClick={() => setDrawerOpen(false)}
+              className={`flex min-h-[42px] items-center justify-between gap-2 rounded-[6px] px-3 text-sm font-medium transition ${
+                pathname.startsWith("/reset-password")
+                  ? "border border-[#E3EF26] bg-[#09352C] text-[#FFFDEE]"
+                  : "text-[#C7DCD2] hover:bg-[#0C342C] hover:text-[#FFFDEE]"
+              }`}
+            >
+              <span className="flex items-center gap-2.5 truncate">
+                <ShieldAlert className="h-4 w-4 shrink-0 text-[#E3EF26]" />
+                <span className="truncate">ACC Reset Password</span>
+              </span>
+              <span
+                aria-label={`${pendingResetCount} permintaan reset password menunggu`}
+                className={`inline-flex min-w-[22px] items-center justify-center rounded-full px-1.5 py-0.5 font-display text-[10px] font-extrabold tabular-nums ${
+                  pendingResetCount > 0
+                    ? "bg-[#E3EF26] text-[#06231D]"
+                    : "bg-[#124236] text-[#C7DCD2]"
+                }`}
+              >
+                {pendingResetCount}
+              </span>
+            </Link>
+          ) : null}
           {canAccessSettings ? (
             <Link
               href="/settings"

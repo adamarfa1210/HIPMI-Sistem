@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { getDefaultLandingRoute } from "@/lib/api";
 
 export default function HomePage() {
   const { user, loading } = useAuth();
@@ -10,7 +11,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (loading) return;
-    router.replace(user ? "/cms" : "/login");
+    router.replace(getDefaultLandingRoute(user));
   }, [loading, user, router]);
 
   return (

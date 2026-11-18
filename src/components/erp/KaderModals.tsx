@@ -553,10 +553,10 @@ export function ImportKaderModal({
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="font-display text-base font-extrabold text-[#06231D]">
-              Import Massal Kader (Excel / CSV)
+              Import Massal Kader (Khusus NIM)
             </h2>
             <p className="text-xs text-[#64748B]">
-              NIM yang sudah ada akan diperbarui (password &amp; skor tetap aman). NIM baru memakai password default = NIM.
+              NIM baru otomatis dibuat dengan <strong>Password = NIM</strong> &amp; role default <strong>Kader 1</strong> (wajib lengkapi data &amp; ubah password saat login pertama). NIM yang sudah terdaftar otomatis di-skip.
             </p>
           </div>
           <button
@@ -569,12 +569,9 @@ export function ImportKaderModal({
         </div>
 
         <div className="rounded-xl border border-[#D4E4DC] bg-[#FFFDEE] p-3.5 text-xs text-[#2F4F46]">
-          <p className="font-bold text-[#06231D]">Kolom yang Didukung:</p>
+          <p className="font-bold text-[#06231D]">Format Kolom Wajib:</p>
           <p className="mt-1 leading-relaxed">
-            <code>NIM</code>, <code>Nama Lengkap</code>, <code>WhatsApp</code>,{" "}
-            <code>Prodi</code>, <code>Fakultas</code>, <code>Instagram</code>,{" "}
-            <code>Nama Bisnis</code>, <code>Kategori Minat</code>, <code>Status</code>,{" "}
-            <code>Role</code>
+            Cukup 1 kolom <code>NIM</code> pada file Excel (<code>.xlsx</code>/<code>.xls</code>) atau CSV. Biodata akan dilengkapi langsung oleh kader yang bersangkutan saat pertama kali login.
           </p>
           <button
             type="button"
@@ -582,7 +579,7 @@ export function ImportKaderModal({
             className="mt-2.5 inline-flex cursor-pointer items-center gap-1.5 font-bold text-[#076653] underline"
           >
             <Download className="h-3.5 w-3.5" />
-            Unduh Contoh Template CSV
+            Unduh Contoh Template CSV (NIM)
           </button>
         </div>
 
@@ -613,8 +610,8 @@ export function ImportKaderModal({
                 Import selesai: {result.totalProcessed} baris diproses
               </p>
               <p className="tabular-nums">
-                Baru: <strong>{result.created}</strong> • Diperbarui:{" "}
-                <strong>{result.updated}</strong> • Gagal:{" "}
+                Baru: <strong>{result.created}</strong> • Dilewati (Sudah Ada):{" "}
+                <strong>{result.skipped ?? result.updated}</strong> • Gagal:{" "}
                 <strong>{result.failed}</strong>
               </p>
               {result.errors.length > 0 ? (

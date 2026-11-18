@@ -2,8 +2,18 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Globe, Lock, ShieldCheck } from "lucide-react";
+import {
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Globe,
+  KeyRound,
+  Lock,
+  ShieldCheck,
+  X,
+} from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { apiRequest, getDefaultLandingRoute } from "@/lib/api";
 
 export default function LoginPage() {
   const { user, loading, login } = useAuth();
@@ -15,9 +25,15 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotNim, setForgotNim] = useState("");
+  const [forgotSubmitting, setForgotSubmitting] = useState(false);
+  const [forgotMsg, setForgotMsg] = useState<string | null>(null);
+  const [forgotErr, setForgotErr] = useState<string | null>(null);
+
   useEffect(() => {
     if (!loading && user) {
-      router.replace("/cms");
+      router.replace(getDefaultLandingRoute(user));
     }
   }, [loading, user, router]);
 
@@ -26,12 +42,33 @@ export default function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await login(nim.trim(), password);
-      router.replace("/cms");
+      const loggedUser = await login(nim.trim(), password);
+      router.replace(getDefaultLandingRoute(loggedUser));
     } catch (err: any) {
       setError(err?.message || "NIM atau password tidak valid.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotErr(null);
+    setForgotMsg(null);
+    setForgotSubmitting(true);
+    try {
+      await apiRequest("/api/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ nim: forgotNim.trim() }),
+      });
+      setForgotMsg(
+        "Pengajuan reset password berhasil dikirim ke antrean ACC Admin. Setelah di-ACC Admin, silakan login dengan Password = NIM Anda untuk membuat password baru."
+      );
+      setForgotNim("");
+    } catch (err: any) {
+      setForgotErr(err?.message || "Gagal mengajukan reset password.");
+    } finally {
+      setForgotSubmitting(false);
     }
   };
 
@@ -195,16 +232,34 @@ export default function LoginPage() {
             >
               {submitting ? "Memverifikasi..." : "Masuk ke Portal ERP →"}
             </button>
+
+            <div className="flex items-center justify-between pt-1 text-xs">
+              <span className="text-[#475569]">Lupa atau belum pernah ubah password?</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setForgotNim(nim.trim());
+                  setForgotErr(null);
+                  setForgotMsg(null);
+                  setForgotOpen(true);
+                }}
+                className="cursor-pointer font-bold text-[#076653] underline hover:text-[#06231D]"
+              >
+                Lupa Password?
+              </button>
+            </div>
           </form>
 
           <div className="mt-6 rounded-[6px] border border-[#A7F3D0] bg-[#E2FBCE] p-3.5">
             <p className="flex items-center gap-1.5 font-display text-[11px] font-bold text-[#076653]">
               <Lock className="h-3.5 w-3.5" />
-              <span>PROSEDUR LUPA PASSWORD (PRD 3.1)</span>
+              <span>AKUN KADER BARU &amp; LUPA PASSWORD</span>
             </p>
             <p className="mt-1 text-xs leading-relaxed text-[#06231D]">
-              Reset password dilakukan oleh Admin / BPH melalui Master Kader
-              atau token reset internal (tanpa OTP WhatsApp).
+              Kader baru hasil import NIM menggunakan{" "}
+              <strong>Password = NIM</strong> pada login pertama. Jika lupa
+              password, ajukan lewat tombol <strong>Lupa Password?</strong> agar
+              di-ACC Admin.
             </p>
           </div>
         </div>
@@ -213,6 +268,92 @@ export default function LoginPage() {
           © 2026 UKM HIPMI PT Universitas Telkom
         </p>
       </section>
+
+      {forgotOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#06231D]/70 p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <form
+            onSubmit={handleForgotSubmit}
+            className="w-full max-w-md space-y-4 rounded-[14px] border border-[#D4E4DC] bg-white p-6 shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-display text-[10px] font-bold uppercase tracking-[0.08em] text-[#076653]">
+                  PENGAJUAN RESET PASSWORD
+                </p>
+                <h2 className="mt-0.5 font-display text-base font-extrabold text-[#06231D]">
+                  Lupa Password Portal ERP
+                </h2>
+                <p className="mt-1 text-xs text-[#475569]">
+                  Masukkan NIM Anda untuk mengirim permintaan reset password ke Admin.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setForgotOpen(false)}
+                className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded text-[#475569] hover:bg-[#F1F5F9]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div>
+              <label
+                htmlFor="forgot-nim"
+                className="mb-1.5 block text-xs font-semibold text-[#06231D]"
+              >
+                Nomor Induk Mahasiswa (NIM)
+              </label>
+              <input
+                id="forgot-nim"
+                type="text"
+                inputMode="numeric"
+                required
+                minLength={5}
+                maxLength={20}
+                value={forgotNim}
+                onChange={(e) => setForgotNim(e.target.value)}
+                placeholder="Masukkan NIM terdaftar Anda"
+                className="tabular-nums min-h-[42px] w-full rounded-[6px] border border-[#D4E4DC] bg-[#FFFDEE] px-3.5 text-sm text-[#06231D] focus:border-[#076653] focus:outline-none"
+              />
+            </div>
+
+            {forgotErr ? (
+              <div className="rounded-[6px] border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+                {forgotErr}
+              </div>
+            ) : null}
+
+            {forgotMsg ? (
+              <div className="flex items-start gap-2 rounded-[6px] border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-medium text-emerald-900">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                <span>{forgotMsg}</span>
+              </div>
+            ) : null}
+
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setForgotOpen(false)}
+                className="min-h-[38px] cursor-pointer rounded-[6px] border border-[#D4E4DC] px-4 text-xs font-semibold text-[#06231D]"
+              >
+                Tutup
+              </button>
+              <button
+                type="submit"
+                disabled={forgotSubmitting}
+                className="inline-flex min-h-[38px] cursor-pointer items-center gap-1.5 rounded-[6px] bg-[#076653] px-4 font-display text-xs font-bold text-[#FFFDEE] hover:bg-[#06231D] disabled:opacity-50"
+              >
+                <KeyRound className="h-3.5 w-3.5 text-[#E3EF26]" />
+                {forgotSubmitting ? "Mengirim..." : "Ajukan Reset Password"}
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
     </div>
   );
 }
