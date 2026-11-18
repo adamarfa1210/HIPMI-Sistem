@@ -85,6 +85,8 @@ const MODULE_ORDER = [
   "tracking",
   "leaderboard",
   "calendar",
+  "rbpl",
+  "qr-scanner",
   "documents",
   "cms",
   "news",

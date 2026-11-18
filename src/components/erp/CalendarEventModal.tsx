@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { QrCode, Users, X } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import {
   CALENDAR_CATEGORIES,
@@ -9,6 +9,7 @@ import {
   toLocalDateTimeInput,
   type CalendarCategory,
   type CalendarEventItem,
+  type CalendarRoleOption,
 } from "@/lib/calendar";
 import type { ProkerItem } from "@/lib/tracking";
 
@@ -17,6 +18,9 @@ export function CalendarEventModal({
   initial,
   defaultDayKey,
   prokerOptions,
+  roleOptions,
+  canCreateCalendar,
+  canCreateRbpl,
   onClose,
   onSaved,
 }: {
@@ -24,8 +28,11 @@ export function CalendarEventModal({
   initial: CalendarEventItem | null;
   defaultDayKey: string | null;
   prokerOptions: ProkerItem[];
+  roleOptions: CalendarRoleOption[];
+  canCreateCalendar: boolean;
+  canCreateRbpl: boolean;
   onClose: () => void;
-  onSaved: (isEdit: boolean) => void;
+  onSaved: (isEdit: boolean, savedEvent: CalendarEventItem | null) => void;
 }) {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<CalendarCategory>("PROKER");
@@ -34,8 +41,17 @@ export function CalendarEventModal({
   const [endAt, setEndAt] = useState("");
   const [location, setLocation] = useState("");
   const [isPublic, setIsPublic] = useState(false);
+  const [enableQrAttendance, setEnableQrAttendance] = useState(false);
+  const [pointsPerAttendance, setPointsPerAttendance] = useState("5");
+  const [targetRoleIds, setTargetRoleIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const selectableCategories = CALENDAR_CATEGORIES.filter((cat) => {
+    if (initial && initial.category === cat) return true;
+    if (cat === "RBPL") return canCreateRbpl;
+    return canCreateCalendar;
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -48,19 +64,33 @@ export function CalendarEventModal({
       setEndAt(toLocalDateTimeInput(initial.endAt));
       setLocation(initial.location);
       setIsPublic(Boolean(initial.isPublic));
+      setEnableQrAttendance(Boolean(initial.enableQrAttendance));
+      setPointsPerAttendance(String(initial.pointsPerAttendance ?? 5));
+      setTargetRoleIds((initial.targetRoles || []).map((r) => r.id));
     } else {
       const baseDay = defaultDayKey || new Date().toISOString().slice(0, 10);
       setTitle("");
-      setCategory("PROKER");
+      setCategory(canCreateCalendar ? "PROKER" : "RBPL");
       setProkerId("");
       setStartAt(`${baseDay}T09:00`);
       setEndAt(`${baseDay}T12:00`);
       setLocation("");
       setIsPublic(false);
+      setEnableQrAttendance(false);
+      setPointsPerAttendance("5");
+      setTargetRoleIds([]);
     }
-  }, [open, initial, defaultDayKey]);
+  }, [open, initial, defaultDayKey, canCreateCalendar]);
 
   if (!open) return null;
+
+  const toggleRole = (roleId: string) => {
+    setTargetRoleIds((prev) =>
+      prev.includes(roleId)
+        ? prev.filter((id) => id !== roleId)
+        : [...prev, roleId]
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,6 +100,15 @@ export function CalendarEventModal({
     const eDate = new Date(endAt);
     if (eDate < sDate) {
       setError("Waktu selesai tidak boleh lebih awal dari waktu mulai.");
+      return;
+    }
+
+    const parsedPoints = Number.parseInt(pointsPerAttendance, 10);
+    if (
+      enableQrAttendance &&
+      (Number.isNaN(parsedPoints) || parsedPoints < 0 || parsedPoints > 500)
+    ) {
+      setError("Poin kehadiran harus antara 0 hingga 500.");
       return;
     }
 
@@ -83,19 +122,23 @@ export function CalendarEventModal({
         endAt: eDate.toISOString(),
         location: location.trim(),
         isPublic,
+        enableQrAttendance,
+        pointsPerAttendance: enableQrAttendance ? parsedPoints : 0,
+        targetRoleIds,
       };
+      let saved: CalendarEventItem | null = null;
       if (initial) {
-        await apiRequest(`/api/calendar/${initial.id}`, {
+        saved = await apiRequest<CalendarEventItem>(`/api/calendar/${initial.id}`, {
           method: "PATCH",
           body: JSON.stringify(payload),
         });
       } else {
-        await apiRequest("/api/calendar", {
+        saved = await apiRequest<CalendarEventItem>("/api/calendar", {
           method: "POST",
           body: JSON.stringify(payload),
         });
       }
-      onSaved(Boolean(initial));
+      onSaved(Boolean(initial), saved);
     } catch (err: any) {
       setError(err?.message || "Gagal menyimpan agenda kalender");
     } finally {
@@ -111,7 +154,7 @@ export function CalendarEventModal({
     >
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-lg space-y-4 rounded-[14px] border border-[#D4E4DC] bg-white p-6 shadow-xl"
+        className="max-h-[92vh] w-full max-w-xl space-y-4 overflow-y-auto rounded-[14px] border border-[#D4E4DC] bg-white p-6 shadow-xl"
       >
         <div className="flex items-center justify-between">
           <div>
@@ -119,7 +162,7 @@ export function CalendarEventModal({
               {initial ? "Edit Agenda Kalender" : "Tambah Agenda Calendar HIPMI"}
             </h2>
             <p className="text-xs text-[#64748B]">
-              Tersimpan di PostgreSQL dan tersedia di feed publik jika dicentang publik.
+              Atur jadwal, target role wajib hadir, dan absensi QR otomatis sesuai kebutuhan agenda.
             </p>
           </div>
           <button
@@ -143,7 +186,7 @@ export function CalendarEventModal({
             maxLength={140}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Contoh: HIPMI Business Festival & Expo 2026"
+            placeholder="Contoh: RBPL Evaluasi Triwulan I / Rapat Pleno"
             className="min-h-[42px] w-full rounded-[8px] border border-[#D4E4DC] bg-[#FFFDEE] px-3 text-sm text-[#06231D]"
           />
         </div>
@@ -158,7 +201,7 @@ export function CalendarEventModal({
               onChange={(e) => setCategory(e.target.value as CalendarCategory)}
               className="min-h-[42px] w-full rounded-[8px] border border-[#D4E4DC] bg-[#FFFDEE] px-3 text-sm text-[#06231D]"
             >
-              {CALENDAR_CATEGORIES.map((cat) => (
+              {selectableCategories.map((cat) => (
                 <option key={cat} value={cat}>
                   {CALENDAR_CATEGORY_META[cat].label}
                 </option>
@@ -226,6 +269,91 @@ export function CalendarEventModal({
             placeholder="Contoh: Telkom University Convention Hall (TUCH) / Zoom"
             className="min-h-[42px] w-full rounded-[8px] border border-[#D4E4DC] bg-[#FFFDEE] px-3 text-sm text-[#06231D]"
           />
+        </div>
+
+        {/* Target Roles Audience Selection */}
+        <div className="space-y-2 rounded-xl border border-[#D4E4DC] bg-[#FFFDEE] p-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#06231D]">
+              <Users className="h-3.5 w-3.5 text-[#076653]" />
+              <span>Role Peserta / Wajib Hadir</span>
+            </div>
+            {targetRoleIds.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setTargetRoleIds([])}
+                className="cursor-pointer text-[11px] font-semibold text-[#076653] hover:underline"
+              >
+                Reset ke Semua Role
+              </button>
+            ) : null}
+          </div>
+          <p className="text-[11px] text-[#64748B]">
+            {targetRoleIds.length === 0
+              ? "Kosong = Terbuka untuk semua role yang memiliki akses Calendar HIPMI."
+              : `Hanya ${targetRoleIds.length} role terpilih (+ pembuat agenda) yang dapat melihat agenda & absensi ini.`}
+          </p>
+          <div className="flex flex-wrap gap-2 pt-1">
+            {roleOptions.map((r) => {
+              const checked = targetRoleIds.includes(r.id);
+              return (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => toggleRole(r.id)}
+                  className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                    checked
+                      ? "border-[#06231D] bg-[#06231D] text-[#E3EF26]"
+                      : "border-[#D4E4DC] bg-white text-[#334155] hover:border-[#076653]"
+                  }`}
+                >
+                  <span>{r.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Flexible QR Attendance Toggle */}
+        <div className="space-y-3 rounded-xl border border-[#D4E4DC] bg-[#F8FAFC] p-3.5">
+          <label className="flex cursor-pointer items-start gap-2.5 text-xs text-[#06231D]">
+            <input
+              type="checkbox"
+              checked={enableQrAttendance}
+              onChange={(e) => setEnableQrAttendance(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-[#076653]"
+            />
+            <span>
+              <strong className="inline-flex items-center gap-1">
+                <QrCode className="h-3.5 w-3.5 text-[#076653]" />
+                Aktifkan Absensi QR Code untuk Agenda ini
+              </strong>
+              <span className="block text-[11px] text-[#64748B]">
+                Menghasilkan QR absensi otomatis &amp; tabel kehadiran peserta (No, Nama, Role). Anda berhak membuka/menutup QR kapan saja.
+              </span>
+            </span>
+          </label>
+
+          {enableQrAttendance ? (
+            <div className="grid gap-3 border-t border-[#E2E8F0] pt-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-[#06231D]">
+                  Poin Keaktifan per Kehadiran
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={500}
+                  value={pointsPerAttendance}
+                  onChange={(e) => setPointsPerAttendance(e.target.value)}
+                  className="min-h-[38px] w-full rounded-[8px] border border-[#D4E4DC] bg-white px-3 text-sm tabular-nums text-[#06231D]"
+                />
+              </div>
+              <div className="flex items-end pb-1 text-[11px] text-[#64748B]">
+                Otomatis menambah poin leaderboard saat kader scan QR (isi <code>0</code> jika tanpa poin).
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-[#D4E4DC] bg-[#FFFDEE] px-3.5 py-3 text-xs text-[#06231D]">

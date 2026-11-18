@@ -1,8 +1,15 @@
 export type CalendarCategory =
   | "PROKER"
   | "INTERNAL_MEETING"
+  | "RBPL"
   | "COMPETITION_DEADLINE"
   | "ORGANIZATION_HOLIDAY";
+
+export interface CalendarRoleOption {
+  id: string;
+  name: string;
+  isSystemDefault?: boolean;
+}
 
 export interface CalendarEventItem {
   id: string;
@@ -15,12 +22,60 @@ export interface CalendarEventItem {
   location: string;
   isPublic: boolean;
   googleEventId: string | null;
+  createdBy: string | null;
+  createdByName: string | null;
+  enableQrAttendance: boolean;
+  pointsPerAttendance: number;
+  qrIsOpen: boolean;
+  meetingId: string | null;
+  targetRoles: CalendarRoleOption[];
+  canManageQr: boolean;
+  qrPayload: string | null;
+  myAttendanceStatus: string | null;
   createdAt: string;
+}
+
+export interface CalendarAttendanceRow {
+  no: number;
+  kaderId: string;
+  nim: string;
+  fullName: string;
+  roleId: string;
+  roleName: string;
+  status: string;
+  pointsAwarded: number;
+  attendedAt: string | null;
+}
+
+export interface CalendarAttendanceData {
+  eventId: string;
+  title: string;
+  category: CalendarCategory;
+  pointsPerAttendance: number;
+  qrIsOpen: boolean;
+  canManageQr: boolean;
+  totalEligible: number;
+  totalHadir: number;
+  totalBelumHadir: number;
+  rows: CalendarAttendanceRow[];
+}
+
+export interface QrScanResult {
+  type: string;
+  eventId?: string;
+  eventTitle?: string;
+  category?: CalendarCategory;
+  status?: string;
+  alreadyAttended?: boolean;
+  pointsAwarded?: number;
+  attendedAt?: string;
+  message: string;
 }
 
 export const CALENDAR_CATEGORIES: CalendarCategory[] = [
   "PROKER",
   "INTERNAL_MEETING",
+  "RBPL",
   "COMPETITION_DEADLINE",
   "ORGANIZATION_HOLIDAY",
 ];
@@ -40,6 +95,12 @@ export const CALENDAR_CATEGORY_META: Record<
     badgeClass: "border-[#BAE6FD] bg-[#E0F2FE] text-[#075985]",
     chipClass: "bg-[#E0F2FE] text-[#075985] border-[#BAE6FD]",
     dotClass: "bg-[#0284C7]",
+  },
+  RBPL: {
+    label: "RBPL (Rapat Pengurus)",
+    badgeClass: "border-[#06231D]/30 bg-[#06231D] text-[#E3EF26]",
+    chipClass: "bg-[#06231D] text-[#E3EF26] border-[#06231D]",
+    dotClass: "bg-[#06231D]",
   },
   COMPETITION_DEADLINE: {
     label: "Deadline Kompetisi",

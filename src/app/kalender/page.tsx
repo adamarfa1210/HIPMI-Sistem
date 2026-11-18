@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   CalendarDays,
+  Camera,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -13,10 +14,17 @@ import {
   Lock,
   MapPin,
   Plus,
+  QrCode,
   Trash2,
+  Users,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { CalendarEventModal } from "@/components/erp/CalendarEventModal";
+import {
+  EventAttendanceModal,
+  EventQrDisplayModal,
+  FlexibleQrScannerModal,
+} from "@/components/erp/CalendarQrModals";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
@@ -29,18 +37,37 @@ import {
   formatMonthYearId,
   type CalendarCategory,
   type CalendarEventItem,
+  type CalendarRoleOption,
 } from "@/lib/calendar";
 import { formatDateTimeId, type ProkerItem } from "@/lib/tracking";
 
 type ViewMode = "month" | "list";
 
 export default function CalendarHipmiPage() {
-  const { can } = useAuth();
+  const { user, can, refreshMe } = useAuth();
   const canRead = can("calendar", "read");
-  const canCreate = can("calendar", "create");
-  const canUpdate = can("calendar", "update");
-  const canDelete = can("calendar", "delete");
+  const canCreateCalendar = can("calendar", "create");
+  const canCreateRbpl = can("rbpl", "create");
+  const canCreate = canCreateCalendar || canCreateRbpl;
+  const canUpdateCalendar = can("calendar", "update");
+  const canUpdateRbpl = can("rbpl", "update");
+  const canDeleteCalendar = can("calendar", "delete");
+  const canDeleteRbpl = can("rbpl", "delete");
+  const canScanQr = can("qr-scanner", "read") || can("qr-scanner", "create");
   const canReadTracking = can("tracking", "read");
+
+  const canEditEvent = (ev: CalendarEventItem) => {
+    const isCreator = Boolean(user?.id && ev.createdBy === user.id);
+    if (ev.category === "RBPL") {
+      return canUpdateRbpl || (isCreator && canCreateRbpl);
+    }
+    return canUpdateCalendar || (isCreator && canCreateCalendar);
+  };
+
+  const canRemoveEvent = (ev: CalendarEventItem) => {
+    if (ev.category === "RBPL") return canDeleteRbpl;
+    return canDeleteCalendar;
+  };
 
   const now = new Date();
   const [cursorYear, setCursorYear] = useState(now.getFullYear());
@@ -55,6 +82,7 @@ export default function CalendarHipmiPage() {
 
   const [events, setEvents] = useState<CalendarEventItem[]>([]);
   const [prokerOptions, setProkerOptions] = useState<ProkerItem[]>([]);
+  const [roleOptions, setRoleOptions] = useState<CalendarRoleOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; isError: boolean } | null>(
     null
@@ -62,6 +90,11 @@ export default function CalendarHipmiPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEventItem | null>(null);
+  const [qrEvent, setQrEvent] = useState<CalendarEventItem | null>(null);
+  const [attendanceEvent, setAttendanceEvent] = useState<CalendarEventItem | null>(
+    null
+  );
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const notify = useCallback((message: string, isError = false) => {
     setToast({ message, isError });
@@ -95,6 +128,13 @@ export default function CalendarHipmiPage() {
   useEffect(() => {
     loadEvents();
   }, [loadEvents]);
+
+  useEffect(() => {
+    if (!canRead && !canCreate) return;
+    apiRequest<CalendarRoleOption[]>("/api/calendar/roles")
+      .then((list) => setRoleOptions(list || []))
+      .catch(() => {});
+  }, [canRead, canCreate]);
 
   useEffect(() => {
     if (!canRead || !canReadTracking) return;
@@ -197,19 +237,33 @@ export default function CalendarHipmiPage() {
                   Seluruh jadwal tersimpan aman di PostgreSQL Supabase (<code>calendar_events</code>). Agenda bertanda <strong>Publik</strong> otomatis tersedia di feed Web UKM.
                 </p>
               </div>
-              {canCreate ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingEvent(null);
-                    setModalOpen(true);
-                  }}
-                  className="inline-flex min-h-[42px] cursor-pointer items-center gap-1.5 rounded-[8px] bg-[#076653] px-4 font-display text-xs font-bold text-[#FFFDEE] hover:bg-[#06231D]"
-                >
-                  <Plus className="h-4 w-4 text-[#E3EF26]" />
-                  Tambah Agenda
-                </button>
-              ) : null}
+              <div className="flex flex-wrap items-center gap-2">
+                {canScanQr ? (
+                  <button
+                    type="button"
+                    onClick={() => setScannerOpen(true)}
+                    title="Kamera Scan QR ERP HIPMI"
+                    aria-label="Kamera Scan QR ERP HIPMI"
+                    className="inline-flex min-h-[42px] cursor-pointer items-center gap-2 rounded-[8px] border border-[#06231D] bg-[#06231D] px-3.5 font-display text-xs font-bold text-[#E3EF26] hover:bg-[#0C342C]"
+                  >
+                    <Camera className="h-4 w-4 shrink-0" />
+                    <span>Scan QR</span>
+                  </button>
+                ) : null}
+                {canCreate ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingEvent(null);
+                      setModalOpen(true);
+                    }}
+                    className="inline-flex min-h-[42px] cursor-pointer items-center gap-1.5 rounded-[8px] bg-[#076653] px-4 font-display text-xs font-bold text-[#FFFDEE] hover:bg-[#06231D]"
+                  >
+                    <Plus className="h-4 w-4 text-[#E3EF26]" />
+                    Tambah Agenda
+                  </button>
+                ) : null}
+              </div>
             </div>
 
             {/* KPI Summary */}
@@ -520,9 +574,61 @@ export default function CalendarHipmiPage() {
                               </p>
                             ) : null}
 
-                            {(canUpdate || canDelete) ? (
-                              <div className="flex justify-end gap-1.5 pt-1">
-                                {canUpdate ? (
+                            <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+                              <span className="inline-flex items-center gap-1 rounded-full border border-[#D4E4DC] bg-white px-2 py-0.5 font-semibold text-[#334155]">
+                                <Users className="h-3 w-3 text-[#076653]" />
+                                {ev.targetRoles.length > 0
+                                  ? ev.targetRoles.map((r) => r.name).join(", ")
+                                  : "Semua Role"}
+                              </span>
+                              {ev.enableQrAttendance ? (
+                                <>
+                                  <span
+                                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-bold ${
+                                      ev.qrIsOpen
+                                        ? "bg-[#E2FBCE] text-[#076653]"
+                                        : "bg-[#F1F5F9] text-[#64748B]"
+                                    }`}
+                                  >
+                                    <QrCode className="h-3 w-3" />
+                                    {ev.qrIsOpen ? "QR Dibuka" : "QR Ditutup"}
+                                    {ev.pointsPerAttendance > 0
+                                      ? ` (+${ev.pointsPerAttendance})`
+                                      : ""}
+                                  </span>
+                                  {ev.myAttendanceStatus === "HADIR" ? (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-[#076653] px-2 py-0.5 font-bold text-[#FFFDEE]">
+                                      <CheckCircle2 className="h-3 w-3 text-[#E3EF26]" />
+                                      Hadir
+                                    </span>
+                                  ) : null}
+                                </>
+                              ) : null}
+                            </div>
+
+                            {(ev.enableQrAttendance || canEditEvent(ev) || canRemoveEvent(ev)) ? (
+                              <div className="flex flex-wrap justify-end gap-1.5 pt-1">
+                                {ev.enableQrAttendance ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setAttendanceEvent(ev)}
+                                    className="inline-flex min-h-[30px] cursor-pointer items-center gap-1 rounded-[6px] border border-[#D4E4DC] bg-white px-2.5 text-[11px] font-semibold text-[#076653] hover:bg-[#E2FBCE]/40"
+                                  >
+                                    <Users className="h-3 w-3" />
+                                    Daftar Hadir
+                                  </button>
+                                ) : null}
+                                {ev.canManageQr ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setQrEvent(ev)}
+                                    className="inline-flex min-h-[30px] cursor-pointer items-center gap-1 rounded-[6px] bg-[#06231D] px-2.5 text-[11px] font-bold text-[#E3EF26] hover:bg-[#076653]"
+                                  >
+                                    <QrCode className="h-3 w-3" />
+                                    QR Absensi
+                                  </button>
+                                ) : null}
+                                {canEditEvent(ev) ? (
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -535,7 +641,7 @@ export default function CalendarHipmiPage() {
                                     Edit
                                   </button>
                                 ) : null}
-                                {canDelete ? (
+                                {canRemoveEvent(ev) ? (
                                   <button
                                     type="button"
                                     onClick={() => handleDelete(ev)}
@@ -622,8 +728,29 @@ export default function CalendarHipmiPage() {
                                 </span>
                               </td>
                               <td className="py-3 text-right">
-                                <div className="inline-flex gap-1.5">
-                                  {canUpdate ? (
+                                <div className="inline-flex flex-wrap justify-end gap-1.5">
+                                  {ev.enableQrAttendance ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setAttendanceEvent(ev)}
+                                      className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-[6px] border border-[#D4E4DC] bg-white px-2 text-[11px] font-semibold text-[#076653] hover:bg-[#E2FBCE]/50"
+                                      title="Lihat Daftar Hadir"
+                                    >
+                                      <Users className="h-3.5 w-3.5" />
+                                      Hadir
+                                    </button>
+                                  ) : null}
+                                  {ev.canManageQr ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setQrEvent(ev)}
+                                      className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-[6px] bg-[#06231D] text-[#E3EF26] hover:bg-[#076653]"
+                                      title="Tampilkan / Kelola QR Absensi"
+                                    >
+                                      <QrCode className="h-3.5 w-3.5" />
+                                    </button>
+                                  ) : null}
+                                  {canEditEvent(ev) ? (
                                     <button
                                       type="button"
                                       onClick={() => {
@@ -636,7 +763,7 @@ export default function CalendarHipmiPage() {
                                       <Edit3 className="h-3.5 w-3.5" />
                                     </button>
                                   ) : null}
-                                  {canDelete ? (
+                                  {canRemoveEvent(ev) ? (
                                     <button
                                       type="button"
                                       onClick={() => handleDelete(ev)}
@@ -666,15 +793,70 @@ export default function CalendarHipmiPage() {
         initial={editingEvent}
         defaultDayKey={selectedDayKey}
         prokerOptions={prokerOptions}
+        roleOptions={roleOptions}
+        canCreateCalendar={canCreateCalendar}
+        canCreateRbpl={canCreateRbpl}
         onClose={() => setModalOpen(false)}
-        onSaved={async (isEdit) => {
+        onSaved={async (isEdit, savedEvent) => {
           setModalOpen(false);
           notify(
             isEdit
               ? "Agenda kalender berhasil diperbarui."
               : "Agenda kalender berhasil ditambahkan."
           );
+          if (savedEvent?.startAt) {
+            const startDate = new Date(savedEvent.startAt);
+            if (!Number.isNaN(startDate.getTime())) {
+              setCursorYear(startDate.getFullYear());
+              setCursorMonth(startDate.getMonth());
+              setSelectedDayKey(formatDayKey(startDate));
+            }
+          }
           await loadEvents();
+          if (!isEdit && savedEvent?.enableQrAttendance && savedEvent.canManageQr) {
+            setQrEvent(savedEvent);
+          }
+        }}
+      />
+
+      <EventQrDisplayModal
+        event={qrEvent}
+        onClose={() => setQrEvent(null)}
+        onStatusChanged={(eventId, isOpen, qrPayload) => {
+          setEvents((prev) =>
+            prev.map((ev) =>
+              ev.id === eventId ? { ...ev, qrIsOpen: isOpen, qrPayload } : ev
+            )
+          );
+          setQrEvent((prev) =>
+            prev && prev.id === eventId
+              ? { ...prev, qrIsOpen: isOpen, qrPayload }
+              : prev
+          );
+          notify(
+            isOpen
+              ? "QR absensi agenda dibuka dan siap dipindai."
+              : "QR absensi agenda ditutup."
+          );
+        }}
+      />
+
+      <EventAttendanceModal
+        event={attendanceEvent}
+        onClose={() => setAttendanceEvent(null)}
+        onOpenQr={(ev) => {
+          setAttendanceEvent(null);
+          setQrEvent(ev);
+        }}
+      />
+
+      <FlexibleQrScannerModal
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScanned={async (result) => {
+          notify(result.message);
+          await loadEvents();
+          await refreshMe();
         }}
       />
     </AppShell>
