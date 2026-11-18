@@ -194,6 +194,7 @@ export function getDefaultLandingRoute(user: AuthUserProfile | null): string {
     ["calendar", "/kalender"],
     ["finance-request", "/keuangan/pengajuan"],
     ["finance", "/keuangan"],
+    ["profile", "/profil"],
     ["password-reset", "/reset-password"],
     ["news-manage", "/berita/kelola"],
     ["admin-rbac", "/settings"],

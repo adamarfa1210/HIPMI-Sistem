@@ -89,6 +89,7 @@ const MODULE_ORDER = [
   "cms",
   "news",
   "news-manage",
+  "profile",
   "password-reset",
   "admin-rbac",
 ];

@@ -17,6 +17,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   Trophy,
+  UserCog,
   Users,
   Wallet,
   X,
@@ -126,6 +127,7 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
   const canAccessTracking = can("tracking", "read");
   const canAccessLeaderboard = can("leaderboard", "read");
   const canAccessCalendar = can("calendar", "read");
+  const canAccessProfile = can("profile", "read");
   const canAccessSettings = can("admin-rbac", "read");
 
   const navLinkClass = (active: boolean) =>
@@ -308,6 +310,16 @@ export function AppShell({ title, breadcrumb, children }: AppShellProps) {
           AKUN &amp; KEAMANAN
         </p>
         <div className="space-y-1.5">
+          {canAccessProfile ? (
+            <Link
+              href="/profil"
+              onClick={() => setDrawerOpen(false)}
+              className={navLinkClass(pathname.startsWith("/profil"))}
+            >
+              <UserCog className="h-4 w-4 text-[#E3EF26]" />
+              <span>Settings Profile</span>
+            </Link>
+          ) : null}
           {canAccessPasswordReset ? (
             <Link
               href="/reset-password"
